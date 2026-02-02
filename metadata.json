@@ -1,0 +1,7 @@
+{
+  "name": "Neural Unlocker AI",
+  "description": "An interactive conversational app that identifies psychological and cognitive blocks through neural analysis of voice stories and provides personalized coaching for unlocking potential.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

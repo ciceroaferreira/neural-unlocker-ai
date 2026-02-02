@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Unlocker AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+        }
+        .neural-gradient {
+            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.2; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+        .pulse {
+            animation: pulse-ring 3s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="neural-gradient min-h-screen">
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
