@@ -16,10 +16,13 @@ const App: React.FC = () => {
 
   const handleError = useCallback((error: any, context: string) => {
     console.error(`Error in ${context}:`, error);
+    const errorMsg = error?.message || error?.toString?.() || 'Erro desconhecido';
     setAppError({
-      title: 'Erro de Protocolo',
-      message: 'Ocorreu uma falha na sincronização neural.',
-      suggestion: 'Verifique conexão e microfone.',
+      title: `Erro: ${context}`,
+      message: errorMsg,
+      suggestion: errorMsg.includes('API') || errorMsg.includes('key')
+        ? 'Verifique se a GEMINI_API_KEY está configurada corretamente no .env.local'
+        : 'Verifique conexão e microfone.',
     });
   }, []);
 
