@@ -22,19 +22,19 @@ const BlockCard: React.FC<BlockCardProps> = ({ block, index }) => {
         : 'BAIXO';
 
   return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700" style={{ animationDelay: `${index * 150}ms` }}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <h4 className="text-lg font-black text-white/90 uppercase tracking-wider">
+    <div className="bg-white/[0.03] border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700" style={{ animationDelay: `${index * 150}ms` }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <h4 className="text-base sm:text-lg font-black text-white/90 uppercase tracking-wider">
             {block.blockName}
           </h4>
-          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">
+          <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-gray-500">
             Bloqueio #{index + 1}
           </span>
         </div>
-        <div className="text-right space-y-1">
-          <div className="text-3xl font-mono font-black text-white/80">{block.intensity}%</div>
-          <span className={`text-[9px] font-black uppercase tracking-[0.3em] bg-gradient-to-r ${intensityColor} bg-clip-text text-transparent`}>
+        <div className="text-right space-y-1 flex-shrink-0">
+          <div className="text-2xl sm:text-3xl font-mono font-black text-white/80">{block.intensity}%</div>
+          <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-gradient-to-r ${intensityColor} bg-clip-text text-transparent`}>
             {intensityLabel}
           </span>
         </div>

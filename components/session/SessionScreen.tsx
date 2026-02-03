@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { SessionMetadata } from '@/types/session';
 import { ReportData } from '@/types/export';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
@@ -43,6 +43,19 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
     if ('vibrate' in navigator) navigator.vibrate(pattern);
   };
 
+  // Read a question aloud via TTS
+  const speakQuestion = useCallback(
+    async (text: string) => {
+      try {
+        await playback.playQuestion(text);
+      } catch (e) {
+        // TTS failure for question is non-critical, just log
+        console.error('Question TTS failed:', e);
+      }
+    },
+    [playback]
+  );
+
   const startRecording = useCallback(async () => {
     gemini.resetMessages();
     neuralAnalysis.reset();
@@ -59,16 +72,18 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
         });
       });
 
+      // Show and speak the first question
       if (questionFlow.currentQuestion) {
         gemini.addSystemMessage(
           questionFlow.currentQuestion.text,
           questionFlow.currentQuestion.id
         );
+        speakQuestion(questionFlow.currentQuestion.text);
       }
     } catch (err) {
       onError(err, 'Hardware Link');
     }
-  }, [gemini, neuralAnalysis, questionFlow, timer, audioExport, recording, onError]);
+  }, [gemini, neuralAnalysis, questionFlow, timer, audioExport, recording, onError, speakQuestion]);
 
   const handleNextQuestion = useCallback(async () => {
     const currentQ = questionFlow.currentQuestion;
@@ -76,23 +91,17 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
 
     const userText = gemini.getUserInputsSince(questionFlow.questionStartTime.current);
     await questionFlow.addUserResponse(userText);
-
-    // After state update, the flow will have advanced. Get the new current question from state.
-    // We use a timeout to wait for the state update since addUserResponse is async.
-    setTimeout(() => {
-      // The state will have updated by now, so we add the system message for the new current question
-    }, 100);
   }, [questionFlow, gemini]);
 
-  // Effect-like: when currentQuestion changes, show it as system message
+  // When currentQuestion changes, show it as system message and read it aloud
   const lastShownQuestionRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     const q = questionFlow.currentQuestion;
     if (q && q.id !== lastShownQuestionRef.current && recording.isRecording) {
       lastShownQuestionRef.current = q.id;
-      // Don't re-show the first question (already shown in startRecording)
       if (questionFlow.state.currentQuestionIndex > 0) {
         gemini.addSystemMessage(q.text, q.id);
+        speakQuestion(q.text);
       }
     }
   }, [questionFlow.currentQuestion, questionFlow.state.currentQuestionIndex, recording.isRecording]);
@@ -149,31 +158,33 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   );
 
   return (
-    <div className="min-h-screen p-4 flex flex-col items-center bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
-      <header className="w-full max-w-4xl flex flex-col items-center mt-6 mb-8">
+    <div className="min-h-screen p-3 sm:p-4 flex flex-col items-center bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
+      <header className="w-full max-w-4xl flex flex-col items-center mt-4 sm:mt-6 mb-4 sm:mb-8">
         <div
-          className="flex items-center gap-4 cursor-pointer group"
+          className="flex items-center gap-3 cursor-pointer group"
           onClick={() => {
             triggerHaptic(20);
             recording.stopCapture();
             gemini.endSession();
+            playback.stopCurrentAudio();
             onBack();
           }}
         >
           <svg className="w-4 h-4 text-indigo-500 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
           </svg>
-          <h1 className="text-4xl font-black tracking-tighter uppercase text-white/90">Neural Unlocker</h1>
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tighter uppercase text-white/90">Neural Unlocker</h1>
         </div>
       </header>
 
-      <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 items-start">
+      <main className="w-full max-w-7xl flex flex-col lg:grid lg:grid-cols-12 gap-4 sm:gap-8 flex-1 items-start">
         <RecordingPanel
           isRecording={recording.isRecording}
           isPaused={recording.isPaused}
           isAnalyzing={neuralAnalysis.isAnalyzing}
           volume={recording.volume}
           playingId={playback.playingId}
+          isSpeakingQuestion={playback.isSpeakingQuestion}
           formattedTime={timer.formatted}
           neuralStatus={neuralStatus}
           vocalWarmth={vocalWarmth}
@@ -186,7 +197,7 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
           hasMessages={gemini.messages.length > 0}
         />
 
-        <div className="lg:col-span-7 flex flex-col gap-6">
+        <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-6 w-full">
           <ChatPanel
             messages={gemini.messages}
             isAnalyzing={neuralAnalysis.isAnalyzing}
@@ -194,6 +205,7 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
             currentQuestionIndex={questionFlow.state.currentQuestionIndex}
             totalQuestions={questionFlow.totalQuestions}
             isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
+            isSpeakingQuestion={playback.isSpeakingQuestion}
             playingId={playback.playingId}
             loadingAudioId={playback.loadingAudioId}
             onPlayVoice={handlePlayVoice}
@@ -222,12 +234,9 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
         </div>
       </main>
 
-      <footer className="py-16 opacity-10 flex flex-col items-center gap-4">
-        <div className="text-[11px] font-black tracking-[1.5em] uppercase text-gray-400">
+      <footer className="py-8 sm:py-16 opacity-10 flex flex-col items-center gap-2">
+        <div className="text-[9px] sm:text-[11px] font-black tracking-[1em] sm:tracking-[1.5em] uppercase text-gray-400">
           Neural Security & Integrity
-        </div>
-        <div className="text-[9px] font-mono text-indigo-500">
-          SESSION_TOKEN: {crypto.randomUUID?.()?.slice(0, 11) || '8f2-9x1-r5k'}
         </div>
       </footer>
     </div>

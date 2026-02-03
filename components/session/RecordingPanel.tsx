@@ -7,6 +7,7 @@ interface RecordingPanelProps {
   isAnalyzing: boolean;
   volume: number;
   playingId: number | null;
+  isSpeakingQuestion: boolean;
   formattedTime: string;
   neuralStatus: string;
   vocalWarmth: number;
@@ -25,6 +26,7 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
   isAnalyzing,
   volume,
   playingId,
+  isSpeakingQuestion,
   formattedTime,
   neuralStatus,
   vocalWarmth,
@@ -41,45 +43,49 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
   };
 
   return (
-    <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-8">
+    <div className="lg:col-span-5 flex flex-col gap-4 sm:gap-6 lg:sticky lg:top-8 w-full">
       {/* Visualizer area */}
-      <div className="relative rounded-[3.5rem] border border-white/5 bg-black/40 p-2 overflow-hidden shadow-2xl min-h-[480px] flex items-center justify-center">
-        <NeuralVisualizer isActive={(isRecording && !isPaused) || playingId !== null} volume={volume} />
+      <div className="relative rounded-[2rem] sm:rounded-[3.5rem] border border-white/5 bg-black/40 p-2 overflow-hidden shadow-2xl min-h-[280px] sm:min-h-[480px] flex items-center justify-center">
+        <NeuralVisualizer isActive={(isRecording && !isPaused) || playingId !== null || isSpeakingQuestion} volume={volume} />
         {isRecording && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8">
             <div
-              className={`relative bg-black/80 backdrop-blur-3xl w-full h-full rounded-[3rem] border transition-all duration-700 flex flex-col justify-between p-8 overflow-hidden ${
-                isPaused ? 'border-indigo-500/30' : 'border-red-500/40'
+              className={`relative bg-black/80 backdrop-blur-3xl w-full h-full rounded-[1.5rem] sm:rounded-[3rem] border transition-all duration-700 flex flex-col justify-between p-4 sm:p-8 overflow-hidden ${
+                isPaused ? 'border-indigo-500/30' : isSpeakingQuestion ? 'border-cyan-500/40' : 'border-red-500/40'
               }`}
             >
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-indigo-500' : 'bg-red-600 animate-pulse'}`} />
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">
-                      {isPaused ? 'LINK SUSPENSO' : 'BIO-SCAN ATIVO'}
+                    <div className={`w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full ${
+                      isPaused ? 'bg-indigo-500' : isSpeakingQuestion ? 'bg-cyan-400 animate-pulse' : 'bg-red-600 animate-pulse'
+                    }`} />
+                    <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white">
+                      {isPaused ? 'LINK SUSPENSO' : isSpeakingQuestion ? 'ZEPHYR FALANDO' : 'BIO-SCAN ATIVO'}
                     </span>
                   </div>
-                  <div className="text-[8px] font-mono text-cyan-400/50 uppercase tracking-[0.3em]">
-                    {neuralStatus}
+                  <div className="text-[7px] sm:text-[8px] font-mono text-cyan-400/50 uppercase tracking-[0.2em] sm:tracking-[0.3em]">
+                    {isSpeakingQuestion ? 'LENDO PERGUNTA...' : neuralStatus}
                   </div>
                 </div>
-                <div className="text-8xl font-mono font-black tracking-tighter tabular-nums text-white/90">
+                <div className="text-4xl sm:text-8xl font-mono font-black tracking-tighter tabular-nums text-white/90">
                   {formattedTime}
                 </div>
               </div>
-              <div className="space-y-6">
-                <div className="h-12 flex items-end justify-between gap-[3px]">
-                  {[...Array(44)].map((_, i) => (
+              <div className="space-y-4 sm:space-y-6">
+                <div className="h-8 sm:h-12 flex items-end justify-between gap-[2px] sm:gap-[3px]">
+                  {[...Array(32)].map((_, i) => (
                     <div
                       key={i}
                       className={`flex-1 rounded-full transition-all duration-150 ${
                         isPaused
                           ? 'bg-indigo-900/20'
-                          : 'bg-gradient-to-t from-red-600 via-indigo-500 to-cyan-400'
+                          : isSpeakingQuestion
+                            ? 'bg-gradient-to-t from-cyan-600 via-indigo-500 to-white'
+                            : 'bg-gradient-to-t from-red-600 via-indigo-500 to-cyan-400'
                       }`}
                       style={{
-                        height: `${isPaused ? 2 : Math.max(2, volume * 1000 * (1 - Math.abs(i - 22) / 22))}px`,
+                        height: `${isPaused ? 2 : Math.max(2, volume * 800 * (1 - Math.abs(i - 16) / 16))}px`,
                         opacity: isPaused ? 0.1 : 0.7,
                       }}
                     />
@@ -92,18 +98,18 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
       </div>
 
       {/* Vocal profile */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-[3rem] p-8 space-y-8 shadow-2xl">
-        <div className="space-y-2">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">
+      <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-8 space-y-4 sm:space-y-8 shadow-2xl">
+        <div className="space-y-1 sm:space-y-2">
+          <h3 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">
             Neural Sync Profile
           </h3>
-          <p className="text-xs text-gray-400 font-medium italic">
-            Voz otimizada para ressonância subconsciente (Zephyr Engine).
+          <p className="text-[10px] sm:text-xs text-gray-400 font-medium italic">
+            Voz Zephyr - ressonância subconsciente.
           </p>
         </div>
-        <div className="space-y-4 px-2">
-          <div className="flex justify-between items-center text-[10px] font-black uppercase text-gray-500">
-            <span>Calibração de Empatia</span>
+        <div className="space-y-3 sm:space-y-4 px-1 sm:px-2">
+          <div className="flex justify-between items-center text-[9px] sm:text-[10px] font-black uppercase text-gray-500">
+            <span>Empatia</span>
             <span>{vocalWarmth}%</span>
           </div>
           <input
@@ -118,12 +124,12 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
       </div>
 
       {/* Control buttons */}
-      <div className="flex gap-4">
+      <div className="flex gap-3 sm:gap-4">
         {!isRecording ? (
           <button
             onClick={() => { triggerHaptic(60); onStartRecording(); }}
             disabled={isAnalyzing}
-            className="flex-1 py-10 rounded-[2.5rem] font-black text-xl bg-indigo-600 hover:bg-indigo-500 shadow-2xl transition-all uppercase tracking-widest"
+            className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-base sm:text-xl bg-indigo-600 hover:bg-indigo-500 shadow-2xl transition-all uppercase tracking-widest"
           >
             Retomar Scan
           </button>
@@ -131,7 +137,7 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
           <>
             <button
               onClick={() => { triggerHaptic(30); onTogglePause(); }}
-              className={`px-10 rounded-[2.5rem] font-black border border-white/5 transition-all ${
+              className={`px-6 sm:px-10 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-base border border-white/5 transition-all ${
                 isPaused ? 'bg-green-600' : 'bg-white/5'
               }`}
             >
@@ -140,15 +146,16 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
             {!isFlowComplete ? (
               <button
                 onClick={() => { triggerHaptic([40, 30, 40]); onNextQuestion(); }}
-                className="flex-1 py-10 rounded-[2.5rem] font-black text-xl bg-cyan-600 hover:bg-cyan-500 shadow-2xl transition-all uppercase tracking-widest"
+                disabled={isSpeakingQuestion}
+                className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl bg-cyan-600 hover:bg-cyan-500 shadow-2xl transition-all uppercase tracking-wider sm:tracking-widest disabled:opacity-50"
               >
-                Próxima Pergunta
+                {isSpeakingQuestion ? 'Ouvindo...' : 'Próxima'}
               </button>
             ) : (
               <button
                 onClick={() => { triggerHaptic([40, 30, 40]); onGenerateInsight(); }}
                 disabled={!hasMessages}
-                className="flex-1 py-10 rounded-[2.5rem] font-black text-xl bg-red-600 hover:bg-red-500 shadow-2xl animate-pulse uppercase tracking-widest"
+                className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl bg-red-600 hover:bg-red-500 shadow-2xl animate-pulse uppercase tracking-wider sm:tracking-widest"
               >
                 Gerar Insight
               </button>

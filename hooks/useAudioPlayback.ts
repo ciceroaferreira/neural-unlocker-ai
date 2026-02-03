@@ -2,9 +2,14 @@ import { useState, useRef, useCallback } from 'react';
 import { generateTTSAudio } from '@/services/ttsService';
 import { getProfileInstructions } from '@/constants/prompts';
 
+const QUESTION_PROSODY = `Use tom calmo, acolhedor e profundo. Fale com extrema calma e empatia.
+Você é uma guia espiritual e neurocientista lendo uma pergunta para o paciente.
+Faça pausas naturais. Velocidade reduzida (0.85x). Ressonância calorosa.`;
+
 export function useAudioPlayback(vocalWarmth: number) {
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [loadingAudioId, setLoadingAudioId] = useState<number | null>(null);
+  const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
   const currentAudioSource = useRef<AudioBufferSourceNode | null>(null);
   const currentCtxRef = useRef<AudioContext | null>(null);
 
@@ -20,6 +25,7 @@ export function useAudioPlayback(vocalWarmth: number) {
       currentCtxRef.current = null;
     }
     setPlayingId(null);
+    setIsSpeakingQuestion(false);
   }, []);
 
   const playVoice = useCallback(
@@ -61,14 +67,44 @@ export function useAudioPlayback(vocalWarmth: number) {
     [playingId, stopCurrentAudio, vocalWarmth]
   );
 
+  const playQuestion = useCallback(
+    async (text: string, onEnded?: () => void) => {
+      stopCurrentAudio();
+      setIsSpeakingQuestion(true);
+
+      try {
+        const { audioBuffer, audioContext } = await generateTTSAudio(text, QUESTION_PROSODY);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+
+        currentAudioSource.current = source;
+        currentCtxRef.current = audioContext;
+
+        source.onended = () => {
+          setIsSpeakingQuestion(false);
+          audioContext.close().catch(() => {});
+          currentAudioSource.current = null;
+          currentCtxRef.current = null;
+          onEnded?.();
+        };
+        source.start(0);
+      } catch (e) {
+        setIsSpeakingQuestion(false);
+        throw e;
+      }
+    },
+    [stopCurrentAudio]
+  );
+
   const playIntroAudio = useCallback(
     async (
       text: string,
       onVolumeUpdate: (vol: number) => void,
       onEnded: () => void
     ) => {
-      const prosody = 'Use tom calmo, acolhedor e profundo. Fale com extrema calma.';
-      const { audioBuffer, audioContext } = await generateTTSAudio(text, prosody);
+      const { audioBuffer, audioContext } = await generateTTSAudio(text, QUESTION_PROSODY);
 
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
@@ -103,7 +139,9 @@ export function useAudioPlayback(vocalWarmth: number) {
   return {
     playingId,
     loadingAudioId,
+    isSpeakingQuestion,
     playVoice,
+    playQuestion,
     playIntroAudio,
     stopCurrentAudio,
   };
