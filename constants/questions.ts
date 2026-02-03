@@ -26,27 +26,11 @@ export const MANDATORY_QUESTIONS: Question[] = [
     followUpPrompt: 'Baseado nos padrões de relacionamento descritos, gere UMA pergunta em PT-BR explorando se esses padrões espelham dinâmicas da família de origem.',
   },
   {
-    id: 'q-career',
-    text: 'O que te trava profissionalmente? Existe algo que você sabe que deveria fazer mas não consegue começar ou manter?',
-    category: 'career',
-    isMandatory: true,
-    order: 3,
-    followUpPrompt: 'Baseado nos bloqueios de carreira descritos, gere UMA pergunta em PT-BR explorando o medo ou crença por trás do bloqueio.',
-  },
-  {
-    id: 'q-beliefs',
-    text: 'Qual frase ou crença sobre a vida você ouviu tantas vezes que acabou acreditando ser verdade? Por exemplo: dinheiro é sujo, não mereço, o mundo é perigoso.',
-    category: 'beliefs',
-    isMandatory: true,
-    order: 4,
-    followUpPrompt: 'Baseado nas crenças limitantes compartilhadas, gere UMA pergunta em PT-BR explorando quando e de quem o usuário internalizou essa crença pela primeira vez.',
-  },
-  {
     id: 'q-emotions',
     text: 'Qual emoção você mais evita sentir? Raiva, tristeza, medo, vergonha? E o que acontece quando ela aparece?',
     category: 'emotions',
     isMandatory: true,
-    order: 5,
+    order: 3,
     followUpPrompt: 'Baseado no padrão de evitação emocional, gere UMA pergunta em PT-BR explorando o que o usuário está se protegendo ao evitar essa emoção.',
   },
   {
@@ -54,7 +38,7 @@ export const MANDATORY_QUESTIONS: Question[] = [
     text: 'Se você pudesse se libertar de um único bloqueio agora, qual seria? E como você imagina sua vida sem ele?',
     category: 'future',
     isMandatory: true,
-    order: 6,
+    order: 4,
   },
 ];
 
@@ -63,8 +47,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   family: 'Família',
   'self-image': 'Autoimagem',
   relationships: 'Relacionamentos',
-  career: 'Carreira',
-  beliefs: 'Crenças',
   emotions: 'Emoções',
   future: 'Futuro',
 };
