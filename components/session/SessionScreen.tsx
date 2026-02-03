@@ -31,6 +31,9 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   const [vocalWarmth, setVocalWarmth] = useState(85);
   const [reportData, setReportData] = useState<ReportData | null>(null);
 
+  // Track which question was last spoken to prevent duplicates
+  const lastShownQuestionRef = React.useRef<string | null>(null);
+
   const recording = useAudioRecording();
   const playback = useAudioPlayback(vocalWarmth);
   const gemini = useGeminiSession(onError);
@@ -44,12 +47,25 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
     if ('vibrate' in navigator) navigator.vibrate(pattern);
   };
 
+  // Track if we're already speaking to prevent duplicate audio
+  const isSpeakingRef = React.useRef(false);
+
   // Read a question aloud via TTS
   const speakQuestion = useCallback(
     async (text: string) => {
+      // Prevent duplicate audio if already speaking
+      if (isSpeakingRef.current || playback.isSpeakingQuestion) {
+        console.log('Already speaking, skipping duplicate TTS');
+        return;
+      }
+
+      isSpeakingRef.current = true;
       try {
-        await playback.playQuestion(text);
+        await playback.playQuestion(text, () => {
+          isSpeakingRef.current = false;
+        });
       } catch (e) {
+        isSpeakingRef.current = false;
         // TTS failure for question is non-critical, just log
         console.error('Question TTS failed:', e);
       }
@@ -83,6 +99,8 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
 
       // Show and speak the first question
       if (questionFlow.currentQuestion) {
+        // Mark as shown BEFORE speaking to prevent useEffect from re-triggering
+        lastShownQuestionRef.current = questionFlow.currentQuestion.id;
         gemini.addSystemMessage(
           questionFlow.currentQuestion.text,
           questionFlow.currentQuestion.id
@@ -103,7 +121,6 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   }, [questionFlow, gemini]);
 
   // When currentQuestion changes, show it as system message and read it aloud
-  const lastShownQuestionRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     const q = questionFlow.currentQuestion;
     if (q && q.id !== lastShownQuestionRef.current && recording.isRecording) {
