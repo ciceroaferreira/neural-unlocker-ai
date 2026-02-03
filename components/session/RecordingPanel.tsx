@@ -49,38 +49,38 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
   };
 
   return (
-    <div className="lg:col-span-5 flex flex-col gap-4 sm:gap-6 lg:sticky lg:top-8 w-full">
-      {/* Visualizer area */}
-      <div className="relative rounded-[2rem] sm:rounded-[3.5rem] border border-white/5 bg-black/40 p-2 overflow-hidden shadow-2xl min-h-[280px] sm:min-h-[480px] flex items-center justify-center">
+    <div className="flex flex-col gap-3 sm:gap-4 lg:gap-6 w-full">
+      {/* Visualizer area - smaller on mobile */}
+      <div className="relative rounded-[1.5rem] sm:rounded-[2.5rem] lg:rounded-[3.5rem] border border-white/5 bg-black/40 p-1.5 sm:p-2 overflow-hidden shadow-2xl min-h-[180px] sm:min-h-[280px] lg:min-h-[400px] flex items-center justify-center">
         <NeuralVisualizer isActive={(isRecording && !isPaused) || playingId !== null || isSpeakingQuestion} volume={volume} />
         {isRecording && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8">
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-2 sm:p-4 lg:p-6">
             <div
-              className={`relative bg-black/80 backdrop-blur-3xl w-full h-full rounded-[1.5rem] sm:rounded-[3rem] border transition-all duration-700 flex flex-col justify-between p-4 sm:p-8 overflow-hidden ${
+              className={`relative bg-black/80 backdrop-blur-3xl w-full h-full rounded-[1rem] sm:rounded-[2rem] lg:rounded-[3rem] border transition-all duration-700 flex flex-col justify-between p-3 sm:p-5 lg:p-8 overflow-hidden ${
                 isPaused ? 'border-indigo-500/30' : isSpeakingQuestion ? 'border-cyan-500/40' : 'border-red-500/40'
               }`}
             >
               <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full ${
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${
                       isPaused ? 'bg-indigo-500' : isSpeakingQuestion ? 'bg-cyan-400 animate-pulse' : 'bg-red-600 animate-pulse'
                     }`} />
-                    <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-white">
-                      {isPaused ? 'LINK SUSPENSO' : isSpeakingQuestion ? 'ZEPHYR FALANDO' : 'BIO-SCAN ATIVO'}
+                    <span className="text-[8px] sm:text-[10px] lg:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-white">
+                      {isPaused ? 'PAUSADO' : isSpeakingQuestion ? 'ZEPHYR' : 'GRAVANDO'}
                     </span>
                   </div>
-                  <div className="text-[7px] sm:text-[8px] font-mono text-cyan-400/50 uppercase tracking-[0.2em] sm:tracking-[0.3em]">
-                    {isSpeakingQuestion ? 'LENDO PERGUNTA...' : neuralStatus}
+                  <div className="text-[6px] sm:text-[7px] lg:text-[8px] font-mono text-cyan-400/50 uppercase tracking-[0.15em] sm:tracking-[0.2em] truncate max-w-[100px] sm:max-w-none">
+                    {isSpeakingQuestion ? 'LENDO...' : neuralStatus}
                   </div>
                 </div>
-                <div className="text-4xl sm:text-8xl font-mono font-black tracking-tighter tabular-nums text-white/90">
+                <div className="text-3xl sm:text-5xl lg:text-7xl font-mono font-black tracking-tighter tabular-nums text-white/90">
                   {formattedTime}
                 </div>
               </div>
-              <div className="space-y-4 sm:space-y-6">
-                <div className="h-8 sm:h-12 flex items-end justify-between gap-[2px] sm:gap-[3px]">
-                  {[...Array(32)].map((_, i) => (
+              <div>
+                <div className="h-6 sm:h-10 lg:h-12 flex items-end justify-between gap-[1px] sm:gap-[2px]">
+                  {[...Array(24)].map((_, i) => (
                     <div
                       key={i}
                       className={`flex-1 rounded-full transition-all duration-150 ${
@@ -91,7 +91,7 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
                             : 'bg-gradient-to-t from-red-600 via-indigo-500 to-cyan-400'
                       }`}
                       style={{
-                        height: `${isPaused ? 2 : Math.max(2, volume * 800 * (1 - Math.abs(i - 16) / 16))}px`,
+                        height: `${isPaused ? 2 : Math.max(2, volume * 600 * (1 - Math.abs(i - 12) / 12))}px`,
                         opacity: isPaused ? 0.1 : 0.7,
                       }}
                     />
@@ -103,44 +103,18 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
         )}
       </div>
 
-      {/* Vocal profile */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-8 space-y-4 sm:space-y-8 shadow-2xl">
-        <div className="space-y-1 sm:space-y-2">
-          <h3 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500">
-            Neural Sync Profile
-          </h3>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium italic">
-            Voz Zephyr - ressonância subconsciente.
-          </p>
-        </div>
-        <div className="space-y-3 sm:space-y-4 px-1 sm:px-2">
-          <div className="flex justify-between items-center text-[9px] sm:text-[10px] font-black uppercase text-gray-500">
-            <span>Empatia</span>
-            <span>{vocalWarmth}%</span>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={vocalWarmth}
-            onChange={(e) => onVocalWarmthChange(parseInt(e.target.value))}
-            className="w-full h-1 bg-white/5 rounded-full appearance-none accent-indigo-600"
-          />
-        </div>
-      </div>
-
-      {/* Progress indicator */}
+      {/* Progress indicator - always visible during recording */}
       {isRecording && !isFlowComplete && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">
-              Progresso da Sessão
+        <div className="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400">
+              Progresso
             </span>
-            <span className="text-[10px] sm:text-xs font-mono font-bold text-white/70">
+            <span className="text-[9px] sm:text-[11px] font-mono font-bold text-white/70">
               {currentQuestionIndex + 1} / {totalQuestions}
             </span>
           </div>
-          <div className="flex gap-1.5 sm:gap-2">
+          <div className="flex gap-1 sm:gap-1.5">
             {Array.from({ length: totalQuestions }).map((_, i) => (
               <div
                 key={i}
@@ -156,78 +130,103 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
               />
             ))}
           </div>
-          <p className="mt-3 text-[9px] sm:text-[10px] text-gray-400 italic text-center">
+          <p className="mt-2 text-[8px] sm:text-[9px] text-gray-400 italic text-center leading-tight">
             {isSpeakingQuestion
-              ? 'Zephyr está lendo a pergunta...'
+              ? 'Ouvindo Zephyr...'
               : isGeneratingFollowUp
-                ? 'Processando sua resposta...'
-                : 'Responda com calma. Quando terminar, toque em "Próxima Pergunta".'
+                ? 'Processando...'
+                : 'Fale sua resposta, depois toque "Próxima"'
             }
           </p>
         </div>
       )}
 
-      {/* Control buttons */}
-      <div className="flex gap-3 sm:gap-4">
+      {/* Control buttons - larger touch targets on mobile */}
+      <div className="flex gap-2 sm:gap-3">
         {!isRecording ? (
           <button
             onClick={() => { triggerHaptic(60); onStartRecording(); }}
             disabled={isAnalyzing}
-            className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-base sm:text-xl bg-indigo-600 hover:bg-indigo-500 shadow-2xl transition-all uppercase tracking-widest"
+            className="flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 shadow-2xl transition-all uppercase tracking-wider"
           >
-            Retomar Scan
+            Iniciar Scan
           </button>
         ) : (
           <>
             <button
               onClick={() => { triggerHaptic(30); onTogglePause(); }}
-              className={`px-6 sm:px-10 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-base border border-white/5 transition-all ${
-                isPaused ? 'bg-green-600' : 'bg-white/5'
+              className={`px-4 sm:px-6 lg:px-8 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-xs sm:text-sm border border-white/5 transition-all ${
+                isPaused ? 'bg-green-600 active:bg-green-700' : 'bg-white/5 active:bg-white/10'
               }`}
             >
-              {isPaused ? 'Retomar' : 'Pausar'}
+              {isPaused ? '▶' : '⏸'}
             </button>
             {!isFlowComplete ? (
               <button
                 onClick={() => { triggerHaptic([40, 30, 40]); onNextQuestion(); }}
                 disabled={isSpeakingQuestion || isGeneratingFollowUp}
-                className={`flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl shadow-2xl transition-all uppercase tracking-wider sm:tracking-widest disabled:opacity-50 ${
+                className={`flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl shadow-2xl transition-all uppercase tracking-wide sm:tracking-wider disabled:opacity-50 ${
                   isGeneratingFollowUp
                     ? 'bg-yellow-600'
-                    : 'bg-cyan-600 hover:bg-cyan-500'
+                    : 'bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700'
                 }`}
               >
                 {isSpeakingQuestion ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    Ouvindo...
+                    <span className="hidden sm:inline">Ouvindo...</span>
+                    <span className="sm:hidden">...</span>
                   </span>
                 ) : isGeneratingFollowUp ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processando...
+                    <span className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span className="hidden sm:inline">Processando</span>
                   </span>
                 ) : (
-                  'Próxima Pergunta'
+                  <span>
+                    <span className="hidden sm:inline">Próxima Pergunta</span>
+                    <span className="sm:hidden">Próxima</span>
+                  </span>
                 )}
               </button>
             ) : (
               <button
                 onClick={() => { triggerHaptic([40, 30, 40]); onGenerateInsight(); }}
                 disabled={!hasMessages}
-                className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 shadow-2xl uppercase tracking-wider sm:tracking-widest"
+                className="flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 active:from-indigo-700 active:to-cyan-700 shadow-2xl uppercase tracking-wide sm:tracking-wider"
               >
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
-                  Gerar Insight Final
+                  <span className="hidden sm:inline">Gerar Insight</span>
+                  <span className="sm:hidden">Insight</span>
                 </span>
               </button>
             )}
           </>
         )}
       </div>
+
+      {/* Vocal profile - collapsed by default on mobile, show only when not recording */}
+      {!isRecording && (
+        <div className="bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl lg:rounded-[2rem] p-3 sm:p-5 lg:p-6 space-y-3 sm:space-y-4 shadow-2xl">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">
+              Voz Zephyr
+            </h3>
+            <span className="text-[9px] sm:text-[10px] font-mono text-white/50">{vocalWarmth}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={vocalWarmth}
+            onChange={(e) => onVocalWarmthChange(parseInt(e.target.value))}
+            className="w-full h-2 bg-white/5 rounded-full"
+          />
+        </div>
+      )}
     </div>
   );
 };

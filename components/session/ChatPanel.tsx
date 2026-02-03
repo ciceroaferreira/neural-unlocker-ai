@@ -37,8 +37,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   }, [messages, isAnalyzing]);
 
   return (
-    <div className="flex flex-col h-[60vh] sm:h-[70vh] lg:h-[850px] bg-[#080808] rounded-[2rem] sm:rounded-[4rem] border border-white/5 shadow-2xl overflow-hidden relative w-full">
-      <div className="flex-1 overflow-y-auto p-4 sm:p-10 space-y-4 sm:space-y-8 custom-scrollbar">
+    <div className="flex flex-col h-[45vh] sm:h-[55vh] lg:h-[700px] bg-[#080808] rounded-xl sm:rounded-[2rem] lg:rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden relative w-full">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 space-y-3 sm:space-y-6 custom-scrollbar hide-scrollbar">
         <QuestionPrompt
           question={currentQuestion}
           currentIndex={currentQuestionIndex}

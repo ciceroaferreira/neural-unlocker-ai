@@ -158,10 +158,11 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   );
 
   return (
-    <div className="min-h-screen p-3 sm:p-4 flex flex-col items-center bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
-      <header className="w-full max-w-4xl flex flex-col items-center mt-4 sm:mt-6 mb-4 sm:mb-8">
+    <div className="min-h-screen flex flex-col bg-[#050505] text-white font-sans overflow-x-hidden selection:bg-indigo-500/30">
+      {/* Header - compact on mobile */}
+      <header className="flex-shrink-0 w-full px-3 sm:px-4 pt-2 sm:pt-4 pb-2 sm:pb-4 flex justify-center">
         <div
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer group"
           onClick={() => {
             triggerHaptic(20);
             recording.stopCapture();
@@ -173,73 +174,81 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
           <svg className="w-4 h-4 text-indigo-500 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
           </svg>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tighter uppercase text-white/90">Neural Unlocker</h1>
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tighter uppercase text-white/90">Neural Unlocker</h1>
         </div>
       </header>
 
-      <main className="w-full max-w-7xl flex flex-col lg:grid lg:grid-cols-12 gap-4 sm:gap-8 flex-1 items-start">
-        <RecordingPanel
-          isRecording={recording.isRecording}
-          isPaused={recording.isPaused}
-          isAnalyzing={neuralAnalysis.isAnalyzing}
-          volume={recording.volume}
-          playingId={playback.playingId}
-          isSpeakingQuestion={playback.isSpeakingQuestion}
-          formattedTime={timer.formatted}
-          neuralStatus={neuralStatus}
-          vocalWarmth={vocalWarmth}
-          onVocalWarmthChange={setVocalWarmth}
-          onTogglePause={recording.togglePause}
-          onNextQuestion={handleNextQuestion}
-          onGenerateInsight={handleGenerateInsight}
-          onStartRecording={startRecording}
-          isFlowComplete={questionFlow.state.isFlowComplete}
-          hasMessages={gemini.messages.length > 0}
-          isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
-          currentQuestionIndex={questionFlow.state.currentQuestionIndex}
-          totalQuestions={questionFlow.totalQuestions}
-        />
-
-        <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-6 w-full">
-          <ChatPanel
-            messages={gemini.messages}
-            isAnalyzing={neuralAnalysis.isAnalyzing}
-            currentQuestion={questionFlow.currentQuestion}
-            currentQuestionIndex={questionFlow.state.currentQuestionIndex}
-            totalQuestions={questionFlow.totalQuestions}
-            isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
-            isSpeakingQuestion={playback.isSpeakingQuestion}
-            playingId={playback.playingId}
-            loadingAudioId={playback.loadingAudioId}
-            onPlayVoice={handlePlayVoice}
-          />
-
-          {neuralAnalysis.analysis && (
-            <AnalysisResults analysis={neuralAnalysis.analysis} />
-          )}
-
-          {reportData && (
-            <ExportPanel
-              reportData={reportData}
-              onDownloadWAV={audioExport.downloadWAV}
-              hasAudio={audioExport.hasAudio}
-              onSaveSession={() => {
-                onSessionComplete({
-                  messages: gemini.messages,
-                  analysis: neuralAnalysis.analysis,
-                  aiInsights: neuralAnalysis.aiInsights,
-                  questionResponses: questionFlow.state.responses,
-                  durationSeconds: timer.seconds,
-                });
-              }}
+      {/* Main content - scrollable area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 overflow-y-auto hide-scrollbar pb-4">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 sm:gap-6 lg:gap-8">
+          {/* On mobile: Chat first, then Recording Panel */}
+          {/* On desktop: Recording Panel left, Chat right */}
+          <div className="order-2 lg:order-1 lg:col-span-5 lg:sticky lg:top-4">
+            <RecordingPanel
+              isRecording={recording.isRecording}
+              isPaused={recording.isPaused}
+              isAnalyzing={neuralAnalysis.isAnalyzing}
+              volume={recording.volume}
+              playingId={playback.playingId}
+              isSpeakingQuestion={playback.isSpeakingQuestion}
+              formattedTime={timer.formatted}
+              neuralStatus={neuralStatus}
+              vocalWarmth={vocalWarmth}
+              onVocalWarmthChange={setVocalWarmth}
+              onTogglePause={recording.togglePause}
+              onNextQuestion={handleNextQuestion}
+              onGenerateInsight={handleGenerateInsight}
+              onStartRecording={startRecording}
+              isFlowComplete={questionFlow.state.isFlowComplete}
+              hasMessages={gemini.messages.length > 0}
+              isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
+              currentQuestionIndex={questionFlow.state.currentQuestionIndex}
+              totalQuestions={questionFlow.totalQuestions}
             />
-          )}
+          </div>
+
+          <div className="order-1 lg:order-2 lg:col-span-7 flex flex-col gap-3 sm:gap-6 w-full">
+            <ChatPanel
+              messages={gemini.messages}
+              isAnalyzing={neuralAnalysis.isAnalyzing}
+              currentQuestion={questionFlow.currentQuestion}
+              currentQuestionIndex={questionFlow.state.currentQuestionIndex}
+              totalQuestions={questionFlow.totalQuestions}
+              isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
+              isSpeakingQuestion={playback.isSpeakingQuestion}
+              playingId={playback.playingId}
+              loadingAudioId={playback.loadingAudioId}
+              onPlayVoice={handlePlayVoice}
+            />
+
+            {neuralAnalysis.analysis && (
+              <AnalysisResults analysis={neuralAnalysis.analysis} />
+            )}
+
+            {reportData && (
+              <ExportPanel
+                reportData={reportData}
+                onDownloadWAV={audioExport.downloadWAV}
+                hasAudio={audioExport.hasAudio}
+                onSaveSession={() => {
+                  onSessionComplete({
+                    messages: gemini.messages,
+                    analysis: neuralAnalysis.analysis,
+                    aiInsights: neuralAnalysis.aiInsights,
+                    questionResponses: questionFlow.state.responses,
+                    durationSeconds: timer.seconds,
+                  });
+                }}
+              />
+            )}
+          </div>
         </div>
       </main>
 
-      <footer className="py-8 sm:py-16 opacity-10 flex flex-col items-center gap-2">
-        <div className="text-[9px] sm:text-[11px] font-black tracking-[1em] sm:tracking-[1.5em] uppercase text-gray-400">
-          Neural Security & Integrity
+      {/* Footer - hidden on mobile during recording */}
+      <footer className={`py-4 sm:py-8 opacity-10 flex-shrink-0 ${recording.isRecording ? 'hidden sm:flex' : 'flex'} flex-col items-center`}>
+        <div className="text-[8px] sm:text-[10px] font-black tracking-[0.5em] sm:tracking-[1em] uppercase text-gray-400">
+          Neural Security
         </div>
       </footer>
     </div>
