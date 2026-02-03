@@ -102,7 +102,8 @@ export function useAudioPlayback(vocalWarmth: number) {
     async (
       text: string,
       onVolumeUpdate: (vol: number) => void,
-      onEnded: () => void
+      onEnded: () => void,
+      onStarted?: () => void
     ) => {
       const { audioBuffer, audioContext } = await generateTTSAudio(text, QUESTION_PROSODY);
 
@@ -123,7 +124,6 @@ export function useAudioPlayback(vocalWarmth: number) {
         onVolumeUpdate(dataArray.reduce((a, b) => a + b) / dataArray.length / 128);
         requestAnimationFrame(updateVolume);
       };
-      updateVolume();
 
       source.onended = () => {
         animating = false;
@@ -131,7 +131,11 @@ export function useAudioPlayback(vocalWarmth: number) {
         onEnded();
         audioContext.close().catch(() => {});
       };
+
+      // Start playback and notify
       source.start(0);
+      updateVolume();
+      onStarted?.();
     },
     []
   );
