@@ -33,6 +33,8 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
 
   // Track which question was last spoken to prevent duplicates
   const lastShownQuestionRef = React.useRef<string | null>(null);
+  // Timestamp of last TTS to prevent rapid duplicates
+  const lastSpeakTimeRef = React.useRef<number>(0);
 
   const recording = useAudioRecording();
   const playback = useAudioPlayback(vocalWarmth);
@@ -52,17 +54,29 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
 
   // Read a question aloud via TTS
   const speakQuestion = useCallback(
-    async (text: string) => {
-      // Prevent duplicate audio if already speaking
-      if (isSpeakingRef.current || playback.isSpeakingQuestion) {
-        console.log('Already speaking, skipping duplicate TTS');
+    async (text: string, questionId: string) => {
+      const now = Date.now();
+      const timeSinceLastSpeak = now - lastSpeakTimeRef.current;
+
+      // Prevent duplicate audio: check ref, state, and time-based debounce (5 seconds)
+      if (isSpeakingRef.current || playback.isSpeakingQuestion || timeSinceLastSpeak < 5000) {
+        console.log('Skipping TTS - already speaking or debounced', {
+          isSpeakingRef: isSpeakingRef.current,
+          isSpeakingQuestion: playback.isSpeakingQuestion,
+          timeSinceLastSpeak,
+          questionId,
+        });
         return;
       }
 
+      console.log('Starting TTS for question:', questionId);
       isSpeakingRef.current = true;
+      lastSpeakTimeRef.current = now;
+
       try {
         await playback.playQuestion(text, () => {
           isSpeakingRef.current = false;
+          console.log('TTS finished for question:', questionId);
         });
       } catch (e) {
         isSpeakingRef.current = false;
@@ -89,6 +103,11 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
     audioExport.clear();
     setReportData(null);
 
+    // Mark first question as shown BEFORE async operations to prevent useEffect race
+    if (questionFlow.currentQuestion) {
+      lastShownQuestionRef.current = questionFlow.currentQuestion.id;
+    }
+
     try {
       const capture = await recording.startCapture();
       const session = await gemini.startSession(() => {
@@ -99,13 +118,11 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
 
       // Show and speak the first question
       if (questionFlow.currentQuestion) {
-        // Mark as shown BEFORE speaking to prevent useEffect from re-triggering
-        lastShownQuestionRef.current = questionFlow.currentQuestion.id;
         gemini.addSystemMessage(
           questionFlow.currentQuestion.text,
           questionFlow.currentQuestion.id
         );
-        speakQuestion(questionFlow.currentQuestion.text);
+        speakQuestion(questionFlow.currentQuestion.text, questionFlow.currentQuestion.id);
       }
     } catch (err) {
       onError(err, 'Hardware Link');
@@ -121,16 +138,21 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   }, [questionFlow, gemini]);
 
   // When currentQuestion changes, show it as system message and read it aloud
+  // Only for questions AFTER the first one (index > 0)
   React.useEffect(() => {
     const q = questionFlow.currentQuestion;
-    if (q && q.id !== lastShownQuestionRef.current && recording.isRecording) {
-      lastShownQuestionRef.current = q.id;
-      if (questionFlow.state.currentQuestionIndex > 0) {
-        gemini.addSystemMessage(q.text, q.id);
-        speakQuestion(q.text);
-      }
+    const idx = questionFlow.state.currentQuestionIndex;
+
+    // Skip if: no question, already shown, not recording, or first question
+    if (!q || q.id === lastShownQuestionRef.current || !recording.isRecording || idx === 0) {
+      return;
     }
-  }, [questionFlow.currentQuestion, questionFlow.state.currentQuestionIndex, recording.isRecording]);
+
+    console.log('useEffect: new question detected', { id: q.id, idx });
+    lastShownQuestionRef.current = q.id;
+    gemini.addSystemMessage(q.text, q.id);
+    speakQuestion(q.text, q.id);
+  }, [questionFlow.currentQuestion, questionFlow.state.currentQuestionIndex, recording.isRecording, gemini, speakQuestion]);
 
   const handleGenerateInsight = useCallback(async () => {
     recording.stopCapture();
