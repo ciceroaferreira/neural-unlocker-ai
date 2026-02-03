@@ -9,6 +9,7 @@ import { useNeuralAnalysis } from '@/hooks/useNeuralAnalysis';
 import { useTimer } from '@/hooks/useTimer';
 import { useNeuralStatus } from '@/hooks/useNeuralStatus';
 import { useAudioExport } from '@/hooks/useAudioExport';
+import { initAudioContext } from '@/services/audioContextManager';
 import RecordingPanel from './RecordingPanel';
 import ChatPanel from './ChatPanel';
 import AnalysisResults from '@/components/analysis/AnalysisResults';
@@ -57,6 +58,14 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   );
 
   const startRecording = useCallback(async () => {
+    // CRITICAL: Initialize AudioContext FIRST, directly in user gesture
+    // Mobile browsers require this to allow audio playback
+    try {
+      await initAudioContext();
+    } catch (e) {
+      console.warn('AudioContext init failed:', e);
+    }
+
     gemini.resetMessages();
     neuralAnalysis.reset();
     questionFlow.initFlow();

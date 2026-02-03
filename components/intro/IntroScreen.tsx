@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import NeuralVisualizer from '@/components/NeuralVisualizer';
 import { useAudioPlayback } from '@/hooks/useAudioPlayback';
 import { MANDATORY_QUESTIONS } from '@/constants/questions';
+import { initAudioContext } from '@/services/audioContextManager';
 
 interface IntroScreenProps {
   onStart: () => void;
@@ -28,6 +29,14 @@ const IntroScreen: React.FC<IntroScreenProps> = ({ onStart, onHistory, onError }
     setLoadingMessage('Conectando com Zephyr...');
     setErrorMessage('');
     triggerHaptic(50);
+
+    // CRITICAL: Initialize AudioContext immediately in user gesture
+    // Mobile browsers require this to allow audio playback
+    try {
+      await initAudioContext();
+    } catch (e) {
+      console.warn('AudioContext init failed:', e);
+    }
 
     // Show loading progress messages
     const loadingMessages = [

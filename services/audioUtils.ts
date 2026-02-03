@@ -9,22 +9,70 @@ export function decode(base64: string): Uint8Array {
   return bytes;
 }
 
+/**
+ * Simple linear interpolation resampling
+ * Converts audio from sourceSampleRate to targetSampleRate
+ */
+function resampleAudio(
+  input: Float32Array,
+  sourceSampleRate: number,
+  targetSampleRate: number
+): Float32Array {
+  if (sourceSampleRate === targetSampleRate) {
+    return input;
+  }
+
+  const ratio = sourceSampleRate / targetSampleRate;
+  const outputLength = Math.floor(input.length / ratio);
+  const output = new Float32Array(outputLength);
+
+  for (let i = 0; i < outputLength; i++) {
+    const srcIndex = i * ratio;
+    const srcIndexFloor = Math.floor(srcIndex);
+    const srcIndexCeil = Math.min(srcIndexFloor + 1, input.length - 1);
+    const fraction = srcIndex - srcIndexFloor;
+
+    // Linear interpolation between samples
+    output[i] = input[srcIndexFloor] * (1 - fraction) + input[srcIndexCeil] * fraction;
+  }
+
+  return output;
+}
+
 export async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,
-  sampleRate: number,
+  sourceSampleRate: number,
   numChannels: number,
 ): Promise<AudioBuffer> {
   const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+  const sourceFrameCount = dataInt16.length / numChannels;
+
+  // Convert Int16 to Float32 first
+  const sourceData = new Float32Array(sourceFrameCount);
+  for (let i = 0; i < sourceFrameCount; i++) {
+    sourceData[i] = dataInt16[i * numChannels] / 32768.0;
+  }
+
+  // Get the AudioContext's actual sample rate (iOS uses native rate, usually 48000)
+  const targetSampleRate = ctx.sampleRate;
+
+  // Resample if needed (e.g., from 24000 Hz to 48000 Hz on iOS)
+  const resampledData = resampleAudio(sourceData, sourceSampleRate, targetSampleRate);
+  const targetFrameCount = resampledData.length;
+
+  console.log(`Audio resampling: ${sourceSampleRate}Hz -> ${targetSampleRate}Hz (${sourceFrameCount} -> ${targetFrameCount} frames)`);
+
+  // Create buffer at the AudioContext's native sample rate
+  const buffer = ctx.createBuffer(numChannels, targetFrameCount, targetSampleRate);
 
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    for (let i = 0; i < targetFrameCount; i++) {
+      channelData[i] = resampledData[i];
     }
   }
+
   return buffer;
 }
 

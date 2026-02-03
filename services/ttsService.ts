@@ -2,6 +2,7 @@ import { Modality } from '@google/genai';
 import { getGeminiClient } from './geminiClient';
 import { decode, decodeAudioData } from './audioUtils';
 import { GEMINI_MODELS, AUDIO_CONFIG } from '@/constants/config';
+import { getSharedAudioContext, initAudioContext } from './audioContextManager';
 
 export interface TTSResult {
   audioBuffer: AudioBuffer;
@@ -35,9 +36,18 @@ CONTEÚDO: ${text}`;
     throw new Error('No audio data returned from TTS');
   }
 
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
-    sampleRate: AUDIO_CONFIG.OUTPUT_SAMPLE_RATE,
-  });
+  // Use shared AudioContext if available (initialized on user gesture)
+  // Fall back to creating a new one if not available
+  let ctx = getSharedAudioContext();
+  if (!ctx || ctx.state === 'closed') {
+    ctx = await initAudioContext();
+  }
+
+  // Ensure context is running (mobile may have suspended it)
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
+
   const buffer = await decodeAudioData(
     decode(base64Audio),
     ctx,

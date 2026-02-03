@@ -11,7 +11,6 @@ export function useAudioPlayback(vocalWarmth: number) {
   const [loadingAudioId, setLoadingAudioId] = useState<number | null>(null);
   const [isSpeakingQuestion, setIsSpeakingQuestion] = useState(false);
   const currentAudioSource = useRef<AudioBufferSourceNode | null>(null);
-  const currentCtxRef = useRef<AudioContext | null>(null);
 
   const stopCurrentAudio = useCallback(() => {
     if (currentAudioSource.current) {
@@ -20,10 +19,7 @@ export function useAudioPlayback(vocalWarmth: number) {
       } catch (e) {}
       currentAudioSource.current = null;
     }
-    if (currentCtxRef.current) {
-      currentCtxRef.current.close().catch(() => {});
-      currentCtxRef.current = null;
-    }
+    // Don't close the shared AudioContext - it's reused for all audio
     setPlayingId(null);
     setIsSpeakingQuestion(false);
   }, []);
@@ -46,16 +42,14 @@ export function useAudioPlayback(vocalWarmth: number) {
         source.connect(audioContext.destination);
 
         currentAudioSource.current = source;
-        currentCtxRef.current = audioContext;
         setPlayingId(id);
         setLoadingAudioId(null);
 
         source.onended = () => {
           setPlayingId(prev => (prev === id ? null : prev));
-          audioContext.close().catch(() => {});
+          // Don't close shared AudioContext - it's reused
           if (currentAudioSource.current === source) {
             currentAudioSource.current = null;
-            currentCtxRef.current = null;
           }
         };
         source.start(0);
@@ -80,13 +74,11 @@ export function useAudioPlayback(vocalWarmth: number) {
         source.connect(audioContext.destination);
 
         currentAudioSource.current = source;
-        currentCtxRef.current = audioContext;
 
         source.onended = () => {
           setIsSpeakingQuestion(false);
-          audioContext.close().catch(() => {});
+          // Don't close shared AudioContext - it's reused
           currentAudioSource.current = null;
-          currentCtxRef.current = null;
           onEnded?.();
         };
         source.start(0);
@@ -129,7 +121,7 @@ export function useAudioPlayback(vocalWarmth: number) {
         animating = false;
         onVolumeUpdate(0);
         onEnded();
-        audioContext.close().catch(() => {});
+        // Don't close shared AudioContext - it's reused
       };
 
       // Start playback and notify
