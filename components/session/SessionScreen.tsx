@@ -195,6 +195,9 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
           onStartRecording={startRecording}
           isFlowComplete={questionFlow.state.isFlowComplete}
           hasMessages={gemini.messages.length > 0}
+          isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
+          currentQuestionIndex={questionFlow.state.currentQuestionIndex}
+          totalQuestions={questionFlow.totalQuestions}
         />
 
         <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-6 w-full">

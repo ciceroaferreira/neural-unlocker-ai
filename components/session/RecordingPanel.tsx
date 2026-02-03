@@ -18,6 +18,9 @@ interface RecordingPanelProps {
   onStartRecording: () => void;
   isFlowComplete: boolean;
   hasMessages: boolean;
+  isGeneratingFollowUp: boolean;
+  currentQuestionIndex: number;
+  totalQuestions: number;
 }
 
 const RecordingPanel: React.FC<RecordingPanelProps> = ({
@@ -37,6 +40,9 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
   onStartRecording,
   isFlowComplete,
   hasMessages,
+  isGeneratingFollowUp,
+  currentQuestionIndex,
+  totalQuestions,
 }) => {
   const triggerHaptic = (pattern: number | number[]) => {
     if ('vibrate' in navigator) navigator.vibrate(pattern);
@@ -123,6 +129,44 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
         </div>
       </div>
 
+      {/* Progress indicator */}
+      {isRecording && !isFlowComplete && (
+        <div className="bg-white/[0.02] border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">
+              Progresso da Sessão
+            </span>
+            <span className="text-[10px] sm:text-xs font-mono font-bold text-white/70">
+              {currentQuestionIndex + 1} / {totalQuestions}
+            </span>
+          </div>
+          <div className="flex gap-1.5 sm:gap-2">
+            {Array.from({ length: totalQuestions }).map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 h-1.5 sm:h-2 rounded-full transition-all duration-500 ${
+                  i < currentQuestionIndex
+                    ? 'bg-green-500'
+                    : i === currentQuestionIndex
+                      ? isSpeakingQuestion
+                        ? 'bg-cyan-400 animate-pulse'
+                        : 'bg-indigo-500 animate-pulse'
+                      : 'bg-white/10'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-[9px] sm:text-[10px] text-gray-400 italic text-center">
+            {isSpeakingQuestion
+              ? 'Zephyr está lendo a pergunta...'
+              : isGeneratingFollowUp
+                ? 'Processando sua resposta...'
+                : 'Responda com calma. Quando terminar, toque em "Próxima Pergunta".'
+            }
+          </p>
+        </div>
+      )}
+
       {/* Control buttons */}
       <div className="flex gap-3 sm:gap-4">
         {!isRecording ? (
@@ -146,18 +190,39 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
             {!isFlowComplete ? (
               <button
                 onClick={() => { triggerHaptic([40, 30, 40]); onNextQuestion(); }}
-                disabled={isSpeakingQuestion}
-                className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl bg-cyan-600 hover:bg-cyan-500 shadow-2xl transition-all uppercase tracking-wider sm:tracking-widest disabled:opacity-50"
+                disabled={isSpeakingQuestion || isGeneratingFollowUp}
+                className={`flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl shadow-2xl transition-all uppercase tracking-wider sm:tracking-widest disabled:opacity-50 ${
+                  isGeneratingFollowUp
+                    ? 'bg-yellow-600'
+                    : 'bg-cyan-600 hover:bg-cyan-500'
+                }`}
               >
-                {isSpeakingQuestion ? 'Ouvindo...' : 'Próxima'}
+                {isSpeakingQuestion ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    Ouvindo...
+                  </span>
+                ) : isGeneratingFollowUp ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processando...
+                  </span>
+                ) : (
+                  'Próxima Pergunta'
+                )}
               </button>
             ) : (
               <button
                 onClick={() => { triggerHaptic([40, 30, 40]); onGenerateInsight(); }}
                 disabled={!hasMessages}
-                className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl bg-red-600 hover:bg-red-500 shadow-2xl animate-pulse uppercase tracking-wider sm:tracking-widest"
+                className="flex-1 py-6 sm:py-10 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-sm sm:text-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 shadow-2xl uppercase tracking-wider sm:tracking-widest"
               >
-                Gerar Insight
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  Gerar Insight Final
+                </span>
               </button>
             )}
           </>

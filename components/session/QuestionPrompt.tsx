@@ -54,7 +54,18 @@ const QuestionPrompt: React.FC<QuestionPromptProps> = ({
         "{question.text}"
       </p>
 
-      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+      {/* Instructions based on state */}
+      {!isSpeaking && !isGeneratingFollowUp && (
+        <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-white/[0.02] rounded-xl border border-white/5">
+          <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed">
+            <span className="text-green-400 font-bold">Dica:</span> Fale naturalmente sobre o tema.
+            Não há resposta certa ou errada. Quando terminar, toque em{' '}
+            <span className="text-cyan-400 font-semibold">"Próxima Pergunta"</span>.
+          </p>
+        </div>
+      )}
+
+      <div className="h-1.5 sm:h-2 bg-white/5 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ${
             isSpeaking
@@ -66,9 +77,11 @@ const QuestionPrompt: React.FC<QuestionPromptProps> = ({
       </div>
 
       {isGeneratingFollowUp && (
-        <div className="mt-2 sm:mt-3 flex items-center gap-2 text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-wider">
-          <div className="w-3 h-3 border border-cyan-400 border-t-transparent rounded-full animate-spin" />
-          Gerando pergunta adaptativa...
+        <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+          <div className="flex items-center gap-3 text-[10px] sm:text-xs text-yellow-300">
+            <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+            <span className="font-medium">Analisando sua resposta e preparando a próxima pergunta...</span>
+          </div>
         </div>
       )}
     </div>

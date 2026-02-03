@@ -58,11 +58,32 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {messages.map((m, i) => {
           if (m.role === 'system') {
+            // Check if it's a question (questions are longer)
+            const isQuestion = m.text.includes('?') && m.text.length > 30;
             return (
-              <div key={i} className="flex justify-center animate-in fade-in duration-500">
-                <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-indigo-400 bg-indigo-500/10 px-4 sm:px-6 py-2 rounded-full text-center max-w-[90%]">
-                  {m.text}
-                </div>
+              <div key={i} className="animate-in fade-in slide-in-from-top-5 duration-700">
+                {isQuestion ? (
+                  <div className="my-4 sm:my-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.3em] text-indigo-400/70">
+                        Nova Pergunta
+                      </span>
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+                    </div>
+                    <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-4 sm:p-5">
+                      <p className="text-sm sm:text-base text-indigo-200 italic leading-relaxed">
+                        "{m.text}"
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-center">
+                    <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-indigo-400 bg-indigo-500/10 px-4 sm:px-6 py-2 rounded-full text-center max-w-[90%]">
+                      {m.text}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           }
