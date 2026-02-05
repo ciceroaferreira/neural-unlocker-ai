@@ -13,6 +13,8 @@ export interface AudioRecordingState {
   }>;
   stopCapture: () => void;
   togglePause: () => void;
+  muteCapture: () => void;
+  unmuteCapture: () => void;
 }
 
 export function useAudioRecording(): AudioRecordingState {
@@ -21,6 +23,7 @@ export function useAudioRecording(): AudioRecordingState {
   const [volume, setVolume] = useState(0);
 
   const isPausedRef = useRef(false);
+  const isMutedRef = useRef(false);
   const inputAudioCtxRef = useRef<AudioContext | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -67,7 +70,7 @@ export function useAudioRecording(): AudioRecordingState {
     let audioCallback: ((base64: string, rawData: Float32Array) => void) | null = null;
 
     scriptNode.onaudioprocess = (e) => {
-      if (isPausedRef.current) {
+      if (isPausedRef.current || isMutedRef.current) {
         setVolume(0);
         return;
       }
@@ -116,6 +119,15 @@ export function useAudioRecording(): AudioRecordingState {
     });
   }, []);
 
+  const muteCapture = useCallback(() => {
+    isMutedRef.current = true;
+    setVolume(0);
+  }, []);
+
+  const unmuteCapture = useCallback(() => {
+    isMutedRef.current = false;
+  }, []);
+
   return {
     isRecording,
     isPaused,
@@ -124,5 +136,7 @@ export function useAudioRecording(): AudioRecordingState {
     startCapture,
     stopCapture,
     togglePause,
+    muteCapture,
+    unmuteCapture,
   };
 }

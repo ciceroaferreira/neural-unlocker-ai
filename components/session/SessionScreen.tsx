@@ -102,8 +102,13 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
       isSpeakingRef.current = true;
       lastSpeakTimeRef.current = now;
 
+      // Mute mic during TTS to prevent capturing system audio or accidental speech
+      recording.muteCapture();
+
       const onEnded = () => {
         isSpeakingRef.current = false;
+        // Resume mic capture after TTS finishes
+        recording.unmuteCapture();
         console.log('TTS finished for question:', questionId);
         // Start recording response after question finishes
         sessionAudio.startResponse(questionIndex);
@@ -126,12 +131,13 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
         }
       } catch (e) {
         isSpeakingRef.current = false;
+        recording.unmuteCapture();
         console.error('Question TTS failed:', e);
         // Still start response recording even if TTS fails
         sessionAudio.startResponse(questionIndex);
       }
     },
-    [playback, sessionAudio]
+    [playback, sessionAudio, recording]
   );
 
   const startRecording = useCallback(async () => {
