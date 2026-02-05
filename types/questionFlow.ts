@@ -1,12 +1,7 @@
 export type QuestionCategory =
-  | 'childhood'
-  | 'family'
-  | 'self-image'
-  | 'relationships'
-  | 'career'
-  | 'beliefs'
-  | 'emotions'
-  | 'future';
+  | 'heranca-familiar'
+  | 'experiencias-marcantes'
+  | 'gatilhos-atuais';
 
 export interface Question {
   id: string;

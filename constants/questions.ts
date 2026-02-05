@@ -1,48 +1,34 @@
-import { Question } from '@/types/questionFlow';
+import { Question, QuestionCategory } from '@/types/questionFlow';
 
 export const MANDATORY_QUESTIONS: Question[] = [
   {
-    id: 'q-childhood',
-    text: 'O que você viu, ouviu e sentiu durante a infância que te impactou mais e como era o seu relacionamento com seus pais, avós e tios?',
-    category: 'childhood',
+    id: 'q-heranca-familiar',
+    text: 'O que você ouviu, viu e sentiu dos seus pais e avós?',
+    category: 'heranca-familiar',
     isMandatory: true,
     order: 0,
+    followUpPrompt: 'Explore mais sobre a herança familiar do usuário: crenças, frases repetidas, comportamentos observados na infância.',
   },
   {
-    id: 'q-self-image',
-    text: 'Como você se vê hoje? Quais adjetivos usaria para descrever a si mesmo(a) e de onde você acha que essa imagem veio?',
-    category: 'self-image',
+    id: 'q-experiencias-marcantes',
+    text: 'Você sentiu ou viveu algo mais que te marcou?',
+    category: 'experiencias-marcantes',
     isMandatory: true,
     order: 1,
+    followUpPrompt: 'Aprofunde nas experiências marcantes: traumas, momentos de ruptura, eventos que moldaram crenças sobre si mesmo.',
   },
   {
-    id: 'q-relationships',
-    text: 'Qual é o padrão que se repete nos seus relacionamentos amorosos ou de amizade? O que você sente que sempre dá errado?',
-    category: 'relationships',
+    id: 'q-gatilhos-atuais',
+    text: 'O que você lembra que te afeta nos dias de hoje?',
+    category: 'gatilhos-atuais',
     isMandatory: true,
     order: 2,
-  },
-  {
-    id: 'q-emotions',
-    text: 'Qual emoção você mais evita sentir? Raiva, tristeza, medo, vergonha? E o que acontece quando ela aparece?',
-    category: 'emotions',
-    isMandatory: true,
-    order: 3,
-  },
-  {
-    id: 'q-future',
-    text: 'Se você pudesse se libertar de um único bloqueio agora, qual seria? E como você imagina sua vida sem ele?',
-    category: 'future',
-    isMandatory: true,
-    order: 4,
+    followUpPrompt: 'Investigue os gatilhos atuais: situações, pessoas ou contextos que reativam padrões emocionais antigos.',
   },
 ];
 
-export const CATEGORY_LABELS: Record<string, string> = {
-  childhood: 'Infância',
-  family: 'Família',
-  'self-image': 'Autoimagem',
-  relationships: 'Relacionamentos',
-  emotions: 'Emoções',
-  future: 'Futuro',
+export const CATEGORY_LABELS: Record<QuestionCategory, string> = {
+  'heranca-familiar': 'Herança Familiar',
+  'experiencias-marcantes': 'Experiências Marcantes',
+  'gatilhos-atuais': 'Gatilhos Atuais',
 };
