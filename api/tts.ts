@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Modality } from '@google/genai';
-import { getServerGeminiClient } from './_lib/geminiServer';
-import { validateMethod, validateBody, handleError } from './_lib/validation';
-import { GEMINI_MODELS, AUDIO_CONFIG } from '../constants/config';
+import { getServerGeminiClient } from './_lib/geminiServer.js';
+import { validateMethod, validateBody, handleError } from './_lib/validation.js';
+import { GEMINI_MODELS, AUDIO_CONFIG } from '../constants/config.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, 'POST')) return;

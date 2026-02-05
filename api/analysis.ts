@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getServerOpenAIClient } from './_lib/openaiServer';
-import { validateMethod, validateBody, handleError } from './_lib/validation';
-import { OPENAI_MODELS } from '../constants/config';
-import { ANALYSIS_SYSTEM_PROMPT } from '../constants/prompts';
+import { getServerOpenAIClient } from './_lib/openaiServer.js';
+import { validateMethod, validateBody, handleError } from './_lib/validation.js';
+import { OPENAI_MODELS } from '../constants/config.js';
+import { ANALYSIS_SYSTEM_PROMPT } from '../constants/prompts.js';
 
 const ANALYSIS_SCHEMA = {
   type: 'object' as const,
