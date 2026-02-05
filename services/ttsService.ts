@@ -1,6 +1,7 @@
 import { decode, decodeAudioData } from './audioUtils';
 import { AUDIO_CONFIG } from '@/constants/config';
 import { getSharedAudioContext, initAudioContext } from './audioContextManager';
+import { fetchWithRetry } from './fetchWithRetry';
 
 export interface TTSResult {
   audioBuffer: AudioBuffer;
@@ -11,11 +12,15 @@ export async function generateTTSAudio(
   text: string,
   prosodyInstructions: string
 ): Promise<TTSResult> {
-  const response = await fetch('/api/tts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, prosodyInstructions }),
-  });
+  const response = await fetchWithRetry(
+    '/api/tts',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, prosodyInstructions }),
+    },
+    { maxRetries: 2, baseDelayMs: 500 }
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
