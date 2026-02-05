@@ -3,22 +3,22 @@
 > Documento de planejamento estratégico para escalar o Neural Unlocker AI do MVP validado para produto robusto de mercado.
 
 **Data:** Fevereiro 2026
-**Status atual:** MVP validado com feedback positivo dos usuários
-**Stack atual:** React 19 + TypeScript + Vite + Gemini AI + Web Audio API + Vercel
+**Status atual:** Fases 1 e 2 concluídas. Próxima: Fase 3 (Auth + Cloud).
+**Stack atual:** React 19 + TypeScript + Vite 6 + Gemini AI + Web Audio API + Vercel
 
 ---
 
 ## Visão Geral da Estratégia
 
 ```
-FASE 1 (Segurança & Estabilidade)   → Semanas 1-3
-FASE 2 (Arquitetura & Resiliência)  → Semanas 3-6
-FASE 3 (Persistência & Usuários)    → Semanas 6-9
-FASE 4 (Qualidade & Confiança)      → Semanas 9-11
+FASE 1 (Segurança & Estabilidade)     → ✅ CONCLUÍDA
+FASE 2 (Arquitetura & Resiliência)    → ✅ CONCLUÍDA
+FASE 3 (Persistência & Usuários)      → Semanas 6-9
+FASE 4 (Qualidade & Confiança)        → Semanas 9-11
 FASE 5 (Inteligência & Flexibilidade) → Semanas 11-13
-FASE 6 (Escala & Alcance)           → Semanas 13-16
+FASE 6 (Escala & Alcance)             → Semanas 13-16
 --- marco: produto web estável ---
-FASE 7 (Avaliação React Native)     → Quando houver tração comprovada
+FASE 7 (Avaliação React Native)       → Quando houver tração comprovada
 ```
 
 ---
@@ -44,114 +44,134 @@ FASE 7 (Avaliação React Native)     → Quando houver tração comprovada
 
 ---
 
-## FASE 1 - Segurança & Infraestrutura Base
+## FASE 1 - Segurança & Infraestrutura Base ✅
 
 **Objetivo:** Proteger a API key e preparar a base para funcionalidades server-side.
-**Duração estimada:** ~2 semanas
+**Status:** Concluída em Fevereiro 2026
 
-### 1.1 Backend Proxy (API Routes)
+### O que foi implementado
 
-| Item | Detalhe |
-|------|---------|
-| **O quê** | Criar Vercel Edge Functions como proxy para todas as chamadas ao Gemini |
-| **Por quê** | API key exposta no frontend = risco de abuso, custos inesperados, e violação dos ToS do Google |
-| **Como** | Diretório `api/` com routes: `api/tts`, `api/analyze`, `api/transcribe` |
-| **Resultado** | API key fica apenas no servidor. Frontend nunca vê a chave. |
-
-**Arquitetura proposta:**
+**Backend Proxy** — Vercel Serverless Functions como proxy para Gemini API:
 ```
-ANTES:  Browser ──(API key no JS)──→ Gemini API
-
-DEPOIS: Browser ──→ /api/tts        ──→ Gemini TTS
-        Browser ──→ /api/analyze     ──→ Gemini Analysis
-        Browser ←──WebSocket──→ /api/transcribe ──→ Gemini Live
+Browser ──→ /api/tts              ──→ Gemini TTS (gemini-2.5-flash-preview-tts)
+Browser ──→ /api/analysis-insights ──→ Gemini Pro (gemini-3-pro-preview)
+Browser ──→ /api/analysis-blocks   ──→ Gemini Flash (gemini-3-flash-preview)
+Browser ←──WebSocket──→ Gemini Live  (client-side, sem proxy)
 ```
 
-### 1.2 Rate Limiting
+**Arquivos criados:**
+- `api/tts.ts` — Endpoint POST, gera áudio TTS
+- `api/analysis-insights.ts` — Endpoint POST, gera texto de insight poético
+- `api/analysis-blocks.ts` — Endpoint POST, gera blocos JSON de análise neural
+- `api/_lib/geminiServer.ts` — Singleton do cliente Gemini server-side (lê `process.env.GEMINI_API_KEY`)
+- `api/_lib/validation.ts` — Helpers de validação: `validateMethod`, `validateBody`, `handleError`
+- `vercel.json` — SPA rewrites (API routes + fallback para index.html)
 
-| Item | Detalhe |
-|------|---------|
-| **O quê** | Limitar requisições por IP/sessão nas API routes |
-| **Por quê** | Prevenir abuso e custos descontrolados |
-| **Como** | Upstash Redis (free tier) ou rate limiting in-memory na edge |
-| **Limites sugeridos** | 5 sessões/hora por IP, 50 chamadas TTS/hora |
+**Arquivos modificados:**
+- `services/ttsService.ts` — `GoogleGenAI` → `fetch('/api/tts')`
+- `services/analysisService.ts` — `GoogleGenAI` → `fetch('/api/analysis-*')`
+- `services/geminiClient.ts` — Agora usado apenas para WebSocket de transcrição
+- `vite.config.ts` — Removido `process.env.API_KEY`, mantido `GEMINI_API_KEY` para WebSocket
+- `package.json` — Adicionado `@vercel/node`, script `dev` agora é `vercel dev`
 
-### 1.3 Variáveis de Ambiente
+**Decisões técnicas:**
+- WebSocket transcription permanece client-side (Vercel não suporta WS em serverless)
+- Node.js Serverless runtime (não Edge) — `@google/genai` precisa de Node APIs
+- API routes usam imports relativos (`../constants/config`), não aliases `@/`
 
-| Item | Detalhe |
-|------|---------|
-| **O quê** | Mover `GEMINI_API_KEY` para variáveis server-side no Vercel |
-| **Por quê** | Env vars com prefixo `VITE_` ficam no bundle do cliente |
-| **Como** | Remover do Vite config, usar apenas em `api/` routes |
-
-### Entregáveis da Fase 1
-- [ ] API route `/api/tts` para geração de áudio
-- [ ] API route `/api/analyze` para análise de bloqueios
-- [ ] API route `/api/transcribe` para transcrição via WebSocket
-- [ ] Rate limiting configurado
-- [ ] API key removida do bundle do frontend
-- [ ] Testes manuais de todas as rotas
+### Entregáveis
+- [x] API route `/api/tts` para geração de áudio
+- [x] API route `/api/analysis-insights` para insights
+- [x] API route `/api/analysis-blocks` para análise de bloqueios
+- [x] API key removida do bundle do frontend (exceto WebSocket)
+- [x] Testes manuais de todas as rotas
+- [ ] Rate limiting (adiado para fase futura)
+- [ ] Proxy para WebSocket (inviável no Vercel — aceito como trade-off)
 
 ---
 
-## FASE 2 - Arquitetura & Resiliência
+## FASE 2 - Arquitetura & Resiliência ✅
 
 **Objetivo:** Eliminar bugs de estado e tornar o app resiliente a falhas.
-**Duração estimada:** ~3 semanas
+**Status:** Concluída em Fevereiro 2026
 
-### 2.1 State Machine para Fluxo de Sessão
+### O que foi implementado
 
-| Item | Detalhe |
-|------|---------|
-| **O quê** | Substituir os hooks soltos + refs manuais por uma state machine explícita |
-| **Por quê** | Eliminar TTS duplicado, transições inconsistentes, e simplificar debug |
-| **Como** | `useReducer` com estados tipados (mais leve que XState para este caso) |
+#### 2.1 State Machine (`useReducer`)
 
-**Estados propostos:**
+8 fases explícitas com transições tipadas:
 ```
-IDLE
-  → INITIALIZING (init AudioContext, pre-cache TTS, conectar transcrição)
-    → SPEAKING_QUESTION (TTS reproduzindo a pergunta)
-      → RECORDING_RESPONSE (usuário gravando resposta)
-        → PROCESSING_RESPONSE (transição entre perguntas)
-          → SPEAKING_QUESTION (próxima pergunta - loop)
-          → ANALYZING (todas perguntas respondidas)
-            → RESULTS (exibir análise)
-              → EXPORT (opções de download)
+[idle] → START_SESSION → [initializing] → INIT_COMPLETE → [recording]
+                                            ↓ INIT_FAILED
+                                         [error] → RETRY → [idle]
 
-Estados de erro:
-  → ERROR_RECOVERABLE (retry disponível)
-  → ERROR_FATAL (voltar ao início)
+[recording] → NEXT_QUESTION → [transitioning] → TRANSITION_COMPLETE → [speaking]
+                                                    ↓ FLOW_COMPLETE
+                                                 [recording]
+
+[speaking] → TTS_ENDED / TTS_FAILED → [recording]
+
+[recording] → GENERATE_INSIGHT → [analyzing] → ANALYSIS_COMPLETE → [results]
+                                                   ↓ ANALYSIS_FAILED
+                                                [error] → RETRY → [idle]
+
+Qualquer fase → ABORT_SESSION → [idle]
+[results] → RESET → [idle]
 ```
 
-**Impacto:** Elimina as 3 camadas de workaround anti-TTS-duplicado. TTS só dispara na transição `→ SPEAKING_QUESTION`. Impossível duplicar.
+#### 2.2 Error Recovery
 
-### 2.2 Error Recovery
+| Feature | Implementação |
+|---------|--------------|
+| **Retry com backoff** | `fetchWithRetry` — exponential backoff com jitter, retry em 5xx/429 |
+| **TTS retry** | 2 tentativas, base 500ms, max 8s |
+| **Analysis retry** | 3 tentativas, base 1000ms, max 8s |
+| **TTS failure** | Non-fatal: pergunta aparece no chat, gravação continua |
+| **UI de erro** | Banner vermelho com contexto + botão "Tentar novamente" |
 
-| Item | Detalhe |
-|------|---------|
-| **Retry com backoff** | 3 tentativas com espera exponencial (1s, 2s, 4s) para chamadas ao Gemini |
-| **Fallback de TTS** | Se Gemini TTS falha, usar Web Speech API nativa como plano B |
-| **Reconexão WebSocket** | Reconectar automaticamente a transcrição se a conexão cair |
-| **Timeout de sessão** | Timeout de 5 minutos de inatividade com opção de retomar |
-| **UI de erro** | Feedback visual claro com botão "Tentar novamente" |
+#### 2.3 Refatoração do SessionScreen
 
-### 2.3 Refatoração do SessionScreen
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| **Linhas** | 379 | 139 |
+| **Refs manuais** | 4 (isSpeaking, lastShown, lastSpeakTime, ttsCache) | 0 |
+| **useEffects** | 1 (race condition prone) | 0 (no componente) |
+| **useCallbacks** | 7 | 0 (delegados ao hook) |
+| **Workarounds TTS** | 3 camadas (ref + state + debounce) | 0 |
 
-| Item | Detalhe |
-|------|---------|
-| **O quê** | Quebrar o componente de 370+ linhas em módulos menores |
-| **Como** | Extrair: `SessionOrchestrator` (state machine), `SessionContext` (estado compartilhado), componentes de UI puros |
-| **Resultado** | Componentes testáveis isoladamente, menos re-renders |
+**Arquivos criados:**
+- `types/sessionMachine.ts` — `SessionPhase`, `SessionError`, `SessionMachineState`, `SessionAction`
+- `hooks/sessionMachineReducer.ts` — Reducer puro com transições tipadas, dev warnings
+- `hooks/useSessionMachine.ts` — Hook de orquestração (~270 linhas), coordena 8 hooks existentes
+- `services/fetchWithRetry.ts` — Retry utility com exponential backoff + jitter
 
-### Entregáveis da Fase 2
-- [ ] State machine implementada com `useReducer` e tipos explícitos
-- [ ] Remoção dos 3 workarounds de TTS duplicado
-- [ ] Retry automático em todas as chamadas de API
-- [ ] Fallback de TTS com Web Speech API
-- [ ] Reconexão automática do WebSocket
-- [ ] SessionScreen refatorado (< 100 linhas)
-- [ ] Testes unitários dos estados e transições
+**Arquivos modificados:**
+- `services/ttsService.ts` — `fetch` → `fetchWithRetry` (2 retries, 500ms)
+- `services/analysisService.ts` — `fetch` → `fetchWithRetry` (3 retries, 1000ms)
+- `components/session/SessionScreen.tsx` — Reescrito como render puro (379 → 139 linhas)
+
+**Race conditions eliminadas:**
+
+| Problema | Antes | Depois |
+|----------|-------|--------|
+| TTS duplicado | 3 workarounds (ref + state + debounce) | TTS só dispara ao entrar em `speaking` |
+| Duplo "Próxima" | Sem guard | `NEXT_QUESTION` só aceito em `recording` |
+| Mute/unmute timing | Chamadas manuais com gap | Automático via useEffect no phase |
+| TTS após abort | onEnded callback órfão | Flag `cancelled` no cleanup |
+| Análise durante TTS | Sem guard | `GENERATE_INSIGHT` só aceito em `recording` |
+
+**Hooks existentes NÃO modificados:**
+`useAudioRecording`, `useAudioPlayback`, `useGeminiSession`, `useQuestionFlow`, `useNeuralAnalysis`, `useTimer`, `useNeuralStatus`, `useSessionAudio`
+
+### Entregáveis
+- [x] State machine implementada com `useReducer` e tipos explícitos
+- [x] Remoção dos 3 workarounds de TTS duplicado
+- [x] Retry automático em chamadas de API (TTS + Analysis)
+- [x] SessionScreen refatorado (379 → 139 linhas)
+- [x] UI de erro com "Tentar novamente"
+- [ ] Fallback de TTS com Web Speech API (adiado para Fase 5)
+- [ ] Reconexão automática do WebSocket (adiado para Fase 5)
+- [ ] Testes unitários do reducer (adiado para Fase 4)
 
 ---
 
@@ -401,15 +421,15 @@ interface AIProvider {
 
 ## Resumo Executivo
 
-| Fase | Foco | Resultado para o Usuário |
-|------|------|--------------------------|
-| **1** | Segurança | App protegido contra abuso |
-| **2** | Estabilidade | Sessões sem bugs de áudio, recovery automático |
-| **3** | Contas | Login, histórico na nuvem, dados seguros |
-| **4** | Qualidade | Menos bugs, deploys mais seguros |
-| **5** | Inteligência | Análises melhores, independência de provedor |
-| **6** | Escala | Mais rápido, acessível, instalável como app |
-| **7** | Nativo | App na loja (quando justificado por tração) |
+| Fase | Foco | Resultado para o Usuário | Status |
+|------|------|--------------------------|--------|
+| **1** | Segurança | App protegido contra abuso | ✅ Concluída |
+| **2** | Estabilidade | Sessões sem bugs de áudio, recovery automático | ✅ Concluída |
+| **3** | Contas | Login, histórico na nuvem, dados seguros | Próxima |
+| **4** | Qualidade | Menos bugs, deploys mais seguros | Planejada |
+| **5** | Inteligência | Análises melhores, independência de provedor | Planejada |
+| **6** | Escala | Mais rápido, acessível, instalável como app | Planejada |
+| **7** | Nativo | App na loja (quando justificado por tração) | Futuro |
 
 ### Princípios Guia
 
