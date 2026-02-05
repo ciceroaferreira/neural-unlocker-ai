@@ -1,5 +1,6 @@
 import { ReportData } from '@/types/export';
 import { CATEGORY_LABELS } from '@/constants/questions';
+import { LEVEL_LABELS, INVESTIGATION_CATEGORY_LABELS, BlockLevel, NeuralAnalysis } from '@/types/analysis';
 
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('pt-BR', {
@@ -15,6 +16,12 @@ function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}m ${secs}s`;
+}
+
+function getLevelLabel(block: NeuralAnalysis): string {
+  if (block.level) return `${block.level}/5 — ${LEVEL_LABELS[block.level as BlockLevel] || 'N/A'}`;
+  if (block.intensity != null) return `${block.intensity}% (legado)`;
+  return 'N/A';
 }
 
 // ── Markdown Export ──
@@ -70,18 +77,38 @@ export function generateMarkdownReport(data: ReportData): string {
   if (data.blocks.length > 0) {
     lines.push('---');
     lines.push('');
-    lines.push('### Análise de Bloqueios');
+    lines.push('### Mapeamento de Desbloqueios');
     lines.push('');
     data.blocks.forEach((block, i) => {
       lines.push(`#### Bloqueio #${i + 1}: ${block.blockName}`);
       lines.push('');
-      lines.push(`- **Intensidade:** ${block.intensity}%`);
+      lines.push(`- **Nível:** ${getLevelLabel(block)}`);
+      if (block.investigationCategory) {
+        lines.push(`- **Categoria:** ${INVESTIGATION_CATEGORY_LABELS[block.investigationCategory]}`);
+      }
       lines.push(`- **Descrição:** ${block.description}`);
       lines.push('');
-      if (block.recommendations.length > 0) {
-        lines.push('**Recomendações:**');
-        block.recommendations.forEach(rec => {
-          lines.push(`- ${rec}`);
+
+      if (block.evidence && block.evidence.length > 0) {
+        lines.push('**Evidências:**');
+        block.evidence.forEach(ev => {
+          lines.push(`> "${ev}"`);
+        });
+        lines.push('');
+      }
+
+      if (block.currentPatterns && block.currentPatterns.length > 0) {
+        lines.push('**Padrões Atuais:**');
+        block.currentPatterns.forEach(p => {
+          lines.push(`- ${p}`);
+        });
+        lines.push('');
+      }
+
+      if (block.actionPlan && block.actionPlan.length > 0) {
+        lines.push('**Plano de Ação:**');
+        block.actionPlan.forEach((step, j) => {
+          lines.push(`${j + 1}. ${step}`);
         });
         lines.push('');
       }
@@ -119,6 +146,14 @@ export function downloadMarkdown(data: ReportData): void {
 }
 
 // ── PDF Export ──
+
+const LEVEL_PDF_COLORS: Record<number, [number, number, number]> = {
+  5: [239, 68, 68],   // red
+  4: [249, 115, 22],  // orange
+  3: [234, 179, 8],   // yellow
+  2: [34, 197, 94],   // green
+  1: [16, 185, 129],  // emerald
+};
 
 export async function downloadPDF(data: ReportData): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
@@ -194,27 +229,48 @@ export async function downloadPDF(data: ReportData): Promise<void> {
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
 
-    addText('ANÁLISE DE BLOQUEIOS', 11, 'bold', [99, 102, 241]);
+    addText('MAPEAMENTO DE DESBLOQUEIOS', 11, 'bold', [99, 102, 241]);
     y += 3;
 
     data.blocks.forEach((block, i) => {
-      checkPage(30);
+      checkPage(40);
+
+      const level = block.level ?? 3;
+      const levelColor = LEVEL_PDF_COLORS[level] || LEVEL_PDF_COLORS[3];
 
       addText(`BLOQUEIO #${i + 1}: ${block.blockName.toUpperCase()}`, 10, 'bold', [220, 220, 220]);
-      addText(`Intensidade: ${block.intensity}%`, 9, 'bold', [
-        block.intensity > 70 ? 239 : block.intensity > 40 ? 234 : 34,
-        block.intensity > 70 ? 68 : block.intensity > 40 ? 179 : 197,
-        block.intensity > 70 ? 68 : block.intensity > 40 ? 8 : 94
-      ]);
+      addText(`Nível: ${getLevelLabel(block)}`, 9, 'bold', levelColor);
+
+      if (block.investigationCategory) {
+        addText(`Categoria: ${INVESTIGATION_CATEGORY_LABELS[block.investigationCategory]}`, 8, 'normal', [150, 150, 200]);
+      }
+
       addText(block.description, 9, 'italic', [180, 180, 180]);
       y += 2;
 
-      if (block.recommendations.length > 0) {
-        addText('Recomendações:', 9, 'bold', [34, 211, 238]);
-        block.recommendations.forEach(rec => {
-          addText(`  • ${rec}`, 8, 'normal', [160, 160, 160]);
+      if (block.evidence && block.evidence.length > 0) {
+        addText('Evidências:', 9, 'bold', [245, 158, 11]);
+        block.evidence.forEach(ev => {
+          addText(`  "${ev}"`, 8, 'italic', [160, 160, 160]);
+        });
+        y += 2;
+      }
+
+      if (block.currentPatterns && block.currentPatterns.length > 0) {
+        addText('Padrões Atuais:', 9, 'bold', [168, 85, 247]);
+        block.currentPatterns.forEach(p => {
+          addText(`  • ${p}`, 8, 'normal', [160, 160, 160]);
+        });
+        y += 2;
+      }
+
+      if (block.actionPlan && block.actionPlan.length > 0) {
+        addText('Plano de Ação:', 9, 'bold', [34, 211, 238]);
+        block.actionPlan.forEach((step, j) => {
+          addText(`  ${j + 1}. ${step}`, 8, 'normal', [160, 160, 160]);
         });
       }
+
       y += 6;
     });
   }

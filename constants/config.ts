@@ -1,8 +1,10 @@
 export const GEMINI_MODELS = {
   TTS: 'gemini-2.5-flash-preview-tts',
   LIVE_AUDIO: 'gemini-2.5-flash-native-audio-preview-12-2025',
-  ANALYSIS_TEXT: 'gemini-3-pro-preview',
-  ANALYSIS_JSON: 'gemini-3-flash-preview',
+} as const;
+
+export const OPENAI_MODELS = {
+  ANALYSIS: 'gpt-4o',
 } as const;
 
 export const AUDIO_CONFIG = {

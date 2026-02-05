@@ -270,8 +270,7 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
         recording.stopCapture();
         gemini.endSession();
 
-        const userInputs = gemini.getAllUserInputs();
-        const result = await neuralAnalysis.runAnalysis(userInputs);
+        const result = await neuralAnalysis.runAnalysis(questionFlow.state.responses);
 
         if (cancelled) return;
 
