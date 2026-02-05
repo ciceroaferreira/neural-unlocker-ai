@@ -1,6 +1,13 @@
-import { useRef, useCallback, MutableRefObject } from 'react';
+import { useCallback } from 'react';
 import { float32ToInt16 } from '@/services/audioUtils';
 import { AUDIO_CONFIG } from '@/constants/config';
+import { AudioSegment } from './useSessionAudio';
+
+// Standard output sample rate for WAV export
+const EXPORT_SAMPLE_RATE = 24000;
+
+// Silence duration between segments (0.5 seconds)
+const SILENCE_SAMPLES = Math.floor(EXPORT_SAMPLE_RATE * 0.5);
 
 function writeWavHeader(
   dataLength: number,
@@ -44,20 +51,78 @@ function writeWavHeader(
   return buffer;
 }
 
-export function useAudioExport(rawBuffers: MutableRefObject<Float32Array[]>) {
-  const hasAudio = rawBuffers.current.length > 0;
+/**
+ * Simple linear interpolation resampling
+ */
+function resampleToRate(input: Float32Array, sourceSampleRate: number, targetSampleRate: number): Float32Array {
+  if (sourceSampleRate === targetSampleRate) {
+    return input;
+  }
 
+  const ratio = sourceSampleRate / targetSampleRate;
+  const outputLength = Math.floor(input.length / ratio);
+  const output = new Float32Array(outputLength);
+
+  for (let i = 0; i < outputLength; i++) {
+    const srcIndex = i * ratio;
+    const srcIndexFloor = Math.floor(srcIndex);
+    const srcIndexCeil = Math.min(srcIndexFloor + 1, input.length - 1);
+    const fraction = srcIndex - srcIndexFloor;
+    output[i] = input[srcIndexFloor] * (1 - fraction) + input[srcIndexCeil] * fraction;
+  }
+
+  return output;
+}
+
+/**
+ * Create silence buffer
+ */
+function createSilence(samples: number): Float32Array {
+  return new Float32Array(samples);
+}
+
+export function useAudioExport(getSegments: () => AudioSegment[]) {
   const getWavBlob = useCallback((): Blob | null => {
-    if (rawBuffers.current.length === 0) return null;
+    const segments = getSegments();
+    if (segments.length === 0) return null;
+
+    // Sort segments by question index and type (question before response)
+    const sortedSegments = [...segments].sort((a, b) => {
+      if (a.questionIndex !== b.questionIndex) {
+        return a.questionIndex - b.questionIndex;
+      }
+      // Question comes before response
+      return a.type === 'question' ? -1 : 1;
+    });
+
+    // Resample all segments to export sample rate and combine with silence
+    const allBuffers: Float32Array[] = [];
+    let prevType: 'question' | 'response' | null = null;
+
+    for (const segment of sortedSegments) {
+      // Add silence between segments (but not before first segment)
+      if (prevType !== null) {
+        // Add longer silence after response (1 second before next question)
+        const silenceDuration = prevType === 'response' ? SILENCE_SAMPLES * 2 : SILENCE_SAMPLES;
+        allBuffers.push(createSilence(silenceDuration));
+      }
+
+      // Resample to export rate
+      const resampled = resampleToRate(segment.buffer, segment.sampleRate, EXPORT_SAMPLE_RATE);
+      allBuffers.push(resampled);
+      prevType = segment.type;
+    }
 
     // Concatenate all buffers
-    const totalLength = rawBuffers.current.reduce((sum, buf) => sum + buf.length, 0);
+    const totalLength = allBuffers.reduce((sum, buf) => sum + buf.length, 0);
     const combined = new Float32Array(totalLength);
     let offset = 0;
-    for (const buf of rawBuffers.current) {
+    for (const buf of allBuffers) {
       combined.set(buf, offset);
       offset += buf.length;
     }
+
+    console.log(`[AudioExport] Combined ${sortedSegments.length} segments, total ${totalLength} samples at ${EXPORT_SAMPLE_RATE}Hz`);
 
     // Convert to Int16 PCM
     const pcm16 = float32ToInt16(combined);
@@ -66,13 +131,13 @@ export function useAudioExport(rawBuffers: MutableRefObject<Float32Array[]>) {
     // Write WAV header
     const header = writeWavHeader(
       pcmBytes.byteLength,
-      AUDIO_CONFIG.INPUT_SAMPLE_RATE,
+      EXPORT_SAMPLE_RATE,
       AUDIO_CONFIG.CHANNELS,
       16
     );
 
     return new Blob([header, pcmBytes], { type: 'audio/wav' });
-  }, [rawBuffers]);
+  }, [getSegments]);
 
   const downloadWAV = useCallback(() => {
     const blob = getWavBlob();
@@ -88,9 +153,5 @@ export function useAudioExport(rawBuffers: MutableRefObject<Float32Array[]>) {
     URL.revokeObjectURL(url);
   }, [getWavBlob]);
 
-  const clear = useCallback(() => {
-    rawBuffers.current = [];
-  }, [rawBuffers]);
-
-  return { hasAudio, getWavBlob, downloadWAV, clear };
+  return { getWavBlob, downloadWAV };
 }

@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Question, QuestionResponse, QuestionFlowState } from '@/types/questionFlow';
 import { MANDATORY_QUESTIONS } from '@/constants/questions';
-import { generateFollowUpQuestion } from '@/services/questionFlowService';
 
 export function useQuestionFlow() {
   const [state, setState] = useState<QuestionFlowState>({
@@ -45,43 +44,22 @@ export function useQuestionFlow() {
         timestamp: Date.now(),
       };
 
-      // Try generating a follow-up question
-      setState(prev => ({ ...prev, isGeneratingFollowUp: true }));
-
-      let followUp: Question | null = null;
-      if (currentQuestion.followUpPrompt && transcribedText.trim().length > 20) {
-        followUp = await generateFollowUpQuestion(
-          currentQuestion,
-          transcribedText,
-          [...state.responses, response]
-        );
-      }
-
       setState(prev => {
         const newResponses = [...prev.responses, response];
-        let newQuestions = [...prev.questions];
-
-        // Insert follow-up after current question if generated
-        if (followUp) {
-          const insertIdx = prev.currentQuestionIndex + 1;
-          newQuestions.splice(insertIdx, 0, followUp);
-        }
-
         const nextIdx = prev.currentQuestionIndex + 1;
-        const isComplete = nextIdx >= newQuestions.length;
+        const isComplete = nextIdx >= prev.questions.length;
 
         return {
+          ...prev,
           currentQuestionIndex: nextIdx,
-          questions: newQuestions,
           responses: newResponses,
           isFlowComplete: isComplete,
-          isGeneratingFollowUp: false,
         };
       });
 
       questionStartTime.current = Date.now();
     },
-    [currentQuestion, state.isFlowComplete, state.responses]
+    [currentQuestion, state.isFlowComplete]
   );
 
   const skipQuestion = useCallback(() => {

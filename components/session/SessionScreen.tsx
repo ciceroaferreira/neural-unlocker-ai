@@ -2,14 +2,17 @@ import React, { useState, useCallback } from 'react';
 import { SessionMetadata } from '@/types/session';
 import { ReportData } from '@/types/export';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
-import { useAudioPlayback } from '@/hooks/useAudioPlayback';
+import { useAudioPlayback, QUESTION_PROSODY } from '@/hooks/useAudioPlayback';
 import { useGeminiSession } from '@/hooks/useGeminiSession';
 import { useQuestionFlow } from '@/hooks/useQuestionFlow';
 import { useNeuralAnalysis } from '@/hooks/useNeuralAnalysis';
 import { useTimer } from '@/hooks/useTimer';
 import { useNeuralStatus } from '@/hooks/useNeuralStatus';
+import { useSessionAudio } from '@/hooks/useSessionAudio';
 import { useAudioExport } from '@/hooks/useAudioExport';
 import { initAudioContext } from '@/services/audioContextManager';
+import { generateTTSAudio, TTSResult } from '@/services/ttsService';
+import { MANDATORY_QUESTIONS } from '@/constants/questions';
 import RecordingPanel from './RecordingPanel';
 import ChatPanel from './ChatPanel';
 import AnalysisResults from '@/components/analysis/AnalysisResults';
@@ -35,6 +38,8 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   const lastShownQuestionRef = React.useRef<string | null>(null);
   // Timestamp of last TTS to prevent rapid duplicates
   const lastSpeakTimeRef = React.useRef<number>(0);
+  // Pre-generated TTS cache: questionId -> TTSResult
+  const ttsCacheRef = React.useRef<Map<string, TTSResult>>(new Map());
 
   const recording = useAudioRecording();
   const playback = useAudioPlayback(vocalWarmth);
@@ -43,7 +48,8 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   const neuralAnalysis = useNeuralAnalysis(onError);
   const timer = useTimer(recording.isRecording && !recording.isPaused);
   const neuralStatus = useNeuralStatus(recording.isRecording && !recording.isPaused);
-  const audioExport = useAudioExport(recording.rawBuffers);
+  const sessionAudio = useSessionAudio();
+  const audioExport = useAudioExport(sessionAudio.getSegments);
 
   const triggerHaptic = (pattern: number | number[]) => {
     if ('vibrate' in navigator) navigator.vibrate(pattern);
@@ -52,14 +58,37 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
   // Track if we're already speaking to prevent duplicate audio
   const isSpeakingRef = React.useRef(false);
 
-  // Read a question aloud via TTS
+  // Pre-generate TTS for all questions in parallel (called at session start)
+  const preloadAllQuestionsTTS = useCallback(() => {
+    ttsCacheRef.current.clear();
+    console.log('[TTS Cache] Pre-generating audio for all questions...');
+
+    MANDATORY_QUESTIONS.forEach((q, index) => {
+      generateTTSAudio(q.text, QUESTION_PROSODY)
+        .then((result) => {
+          ttsCacheRef.current.set(q.id, result);
+          console.log(`[TTS Cache] Cached: ${q.id}`);
+
+          // For Q1 (index 0): add audio to session export without playing
+          // (Q1 was already spoken on the intro screen)
+          if (index === 0) {
+            sessionAudio.addQuestionAudio(result.audioBuffer, 0);
+          }
+        })
+        .catch((e) => {
+          console.warn(`[TTS Cache] Failed to cache ${q.id}:`, e);
+        });
+    });
+  }, [sessionAudio]);
+
+  // Read a question aloud via TTS and capture audio for export
   const speakQuestion = useCallback(
-    async (text: string, questionId: string) => {
+    async (text: string, questionId: string, questionIndex: number) => {
       const now = Date.now();
       const timeSinceLastSpeak = now - lastSpeakTimeRef.current;
 
-      // Prevent duplicate audio: check ref, state, and time-based debounce (5 seconds)
-      if (isSpeakingRef.current || playback.isSpeakingQuestion || timeSinceLastSpeak < 5000) {
+      // Prevent duplicate audio: check ref, state, and time-based debounce (2 seconds)
+      if (isSpeakingRef.current || playback.isSpeakingQuestion || timeSinceLastSpeak < 2000) {
         console.log('Skipping TTS - already speaking or debounced', {
           isSpeakingRef: isSpeakingRef.current,
           isSpeakingQuestion: playback.isSpeakingQuestion,
@@ -73,18 +102,36 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
       isSpeakingRef.current = true;
       lastSpeakTimeRef.current = now;
 
+      const onEnded = () => {
+        isSpeakingRef.current = false;
+        console.log('TTS finished for question:', questionId);
+        // Start recording response after question finishes
+        sessionAudio.startResponse(questionIndex);
+      };
+
+      const onAudioReady = (audioBuffer: AudioBuffer) => {
+        // Capture the TTS audio buffer for export
+        sessionAudio.addQuestionAudio(audioBuffer, questionIndex);
+      };
+
       try {
-        await playback.playQuestion(text, () => {
-          isSpeakingRef.current = false;
-          console.log('TTS finished for question:', questionId);
-        });
+        // Check if we have cached TTS audio for this question
+        const cached = ttsCacheRef.current.get(questionId);
+        if (cached) {
+          console.log(`[TTS Cache] Playing from cache: ${questionId}`);
+          await playback.playQuestionFromBuffer(cached, onEnded, onAudioReady);
+        } else {
+          console.log(`[TTS Cache] Cache miss, generating: ${questionId}`);
+          await playback.playQuestion(text, onEnded, onAudioReady);
+        }
       } catch (e) {
         isSpeakingRef.current = false;
-        // TTS failure for question is non-critical, just log
         console.error('Question TTS failed:', e);
+        // Still start response recording even if TTS fails
+        sessionAudio.startResponse(questionIndex);
       }
     },
-    [playback]
+    [playback, sessionAudio]
   );
 
   const startRecording = useCallback(async () => {
@@ -96,11 +143,14 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
       console.warn('AudioContext init failed:', e);
     }
 
+    // Start pre-generating TTS for all questions in parallel
+    preloadAllQuestionsTTS();
+
     gemini.resetMessages();
     neuralAnalysis.reset();
     questionFlow.initFlow();
     timer.reset();
-    audioExport.clear();
+    sessionAudio.clear();
     setReportData(null);
 
     // Mark first question as shown BEFORE async operations to prevent useEffect race
@@ -111,31 +161,41 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
     try {
       const capture = await recording.startCapture();
       const session = await gemini.startSession(() => {
-        capture.onAudioProcess((base64) => {
+        capture.onAudioProcess((base64, rawData) => {
           session.sendAudio(base64);
+          // Capture raw audio for session export
+          if (rawData) {
+            sessionAudio.addResponseChunk(rawData);
+          }
         });
       });
 
-      // Show and speak the first question
+      // Show the first question as text only (already spoken on intro screen)
+      // Start recording response immediately
       if (questionFlow.currentQuestion) {
         gemini.addSystemMessage(
           questionFlow.currentQuestion.text,
           questionFlow.currentQuestion.id
         );
-        speakQuestion(questionFlow.currentQuestion.text, questionFlow.currentQuestion.id);
+        // Don't speak Q1 again - user already heard it on intro
+        // Start recording response immediately
+        sessionAudio.startResponse(0);
       }
     } catch (err) {
       onError(err, 'Hardware Link');
     }
-  }, [gemini, neuralAnalysis, questionFlow, timer, audioExport, recording, onError, speakQuestion]);
+  }, [gemini, neuralAnalysis, questionFlow, timer, sessionAudio, recording, onError, speakQuestion, preloadAllQuestionsTTS]);
 
   const handleNextQuestion = useCallback(async () => {
     const currentQ = questionFlow.currentQuestion;
     if (!currentQ) return;
 
+    // Finalize current response audio before moving to next question
+    sessionAudio.nextQuestion();
+
     const userText = gemini.getUserInputsSince(questionFlow.questionStartTime.current);
     await questionFlow.addUserResponse(userText);
-  }, [questionFlow, gemini]);
+  }, [questionFlow, gemini, sessionAudio]);
 
   // When currentQuestion changes, show it as system message and read it aloud
   // Only for questions AFTER the first one (index > 0)
@@ -151,10 +211,12 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
     console.log('useEffect: new question detected', { id: q.id, idx });
     lastShownQuestionRef.current = q.id;
     gemini.addSystemMessage(q.text, q.id);
-    speakQuestion(q.text, q.id);
+    speakQuestion(q.text, q.id, idx);
   }, [questionFlow.currentQuestion, questionFlow.state.currentQuestionIndex, recording.isRecording, gemini, speakQuestion]);
 
   const handleGenerateInsight = useCallback(async () => {
+    // Finalize any pending audio before stopping
+    sessionAudio.finalizeCurrentResponse();
     recording.stopCapture();
     gemini.endSession();
 
@@ -247,8 +309,13 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
               onNextQuestion={handleNextQuestion}
               onGenerateInsight={handleGenerateInsight}
               onStartRecording={startRecording}
+              onNewSession={() => {
+                playback.stopCurrentAudio();
+                onBack();
+              }}
               isFlowComplete={questionFlow.state.isFlowComplete}
               hasMessages={gemini.messages.length > 0}
+              hasReport={reportData !== null}
               isGeneratingFollowUp={questionFlow.state.isGeneratingFollowUp}
               currentQuestionIndex={questionFlow.state.currentQuestionIndex}
               totalQuestions={questionFlow.totalQuestions}
@@ -277,7 +344,7 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
               <ExportPanel
                 reportData={reportData}
                 onDownloadWAV={audioExport.downloadWAV}
-                hasAudio={audioExport.hasAudio}
+                hasAudio={sessionAudio.hasAudio}
                 onSaveSession={() => {
                   onSessionComplete({
                     messages: gemini.messages,

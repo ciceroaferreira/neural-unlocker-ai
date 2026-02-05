@@ -16,8 +16,10 @@ interface RecordingPanelProps {
   onNextQuestion: () => void;
   onGenerateInsight: () => void;
   onStartRecording: () => void;
+  onNewSession: () => void;
   isFlowComplete: boolean;
   hasMessages: boolean;
+  hasReport: boolean;
   isGeneratingFollowUp: boolean;
   currentQuestionIndex: number;
   totalQuestions: number;
@@ -38,8 +40,10 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
   onNextQuestion,
   onGenerateInsight,
   onStartRecording,
+  onNewSession,
   isFlowComplete,
   hasMessages,
+  hasReport,
   isGeneratingFollowUp,
   currentQuestionIndex,
   totalQuestions,
@@ -144,13 +148,29 @@ const RecordingPanel: React.FC<RecordingPanelProps> = ({
       {/* Control buttons - larger touch targets on mobile */}
       <div className="flex gap-2 sm:gap-3">
         {!isRecording ? (
-          <button
-            onClick={() => { triggerHaptic(60); onStartRecording(); }}
-            disabled={isAnalyzing}
-            className="flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 shadow-2xl transition-all uppercase tracking-wider"
-          >
-            Iniciar Scan
-          </button>
+          isAnalyzing ? (
+            <div className="flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl bg-white/5 shadow-2xl transition-all uppercase tracking-wider flex items-center justify-center gap-3 text-white/70">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 border-3 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+              <span>Analisando...</span>
+            </div>
+          ) : hasReport ? (
+            <button
+              onClick={() => { triggerHaptic(60); onNewSession(); }}
+              className="flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 active:from-indigo-700 active:to-cyan-700 shadow-2xl transition-all uppercase tracking-wider flex items-center justify-center gap-3"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Nova Sessão
+            </button>
+          ) : (
+            <button
+              onClick={() => { triggerHaptic(60); onStartRecording(); }}
+              className="flex-1 py-5 sm:py-8 lg:py-10 rounded-xl sm:rounded-2xl lg:rounded-[2rem] font-black text-sm sm:text-lg lg:text-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 shadow-2xl transition-all uppercase tracking-wider"
+            >
+              Iniciar Scan
+            </button>
+          )
         ) : (
           <>
             <button

@@ -1,7 +1,5 @@
-import { Modality } from '@google/genai';
-import { getGeminiClient } from './geminiClient';
 import { decode, decodeAudioData } from './audioUtils';
-import { GEMINI_MODELS, AUDIO_CONFIG } from '@/constants/config';
+import { AUDIO_CONFIG } from '@/constants/config';
 import { getSharedAudioContext, initAudioContext } from './audioContextManager';
 
 export interface TTSResult {
@@ -13,25 +11,18 @@ export async function generateTTSAudio(
   text: string,
   prosodyInstructions: string
 ): Promise<TTSResult> {
-  const ai = getGeminiClient();
-  const ttsPrompt = `INSTRUÇÃO DE PROSÓDIA: ${prosodyInstructions}
-CONTEÚDO: ${text}`;
-
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODELS.TTS,
-    contents: [{ parts: [{ text: ttsPrompt }] }],
-    config: {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: AUDIO_CONFIG.TTS_VOICE },
-        },
-      },
-    },
+  const response = await fetch('/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, prosodyInstructions }),
   });
 
-  const base64Audio =
-    response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `TTS API error: ${response.status}`);
+  }
+
+  const { audio: base64Audio } = await response.json();
   if (!base64Audio) {
     throw new Error('No audio data returned from TTS');
   }

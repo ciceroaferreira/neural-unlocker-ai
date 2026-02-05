@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
-import { generateTTSAudio } from '@/services/ttsService';
+import { generateTTSAudio, TTSResult } from '@/services/ttsService';
 import { getProfileInstructions } from '@/constants/prompts';
+import { getSharedAudioContext, initAudioContext } from '@/services/audioContextManager';
 
-const QUESTION_PROSODY = `Use tom calmo, acolhedor e profundo. Fale com extrema calma e empatia.
+export const QUESTION_PROSODY = `Use tom calmo, acolhedor e profundo. Fale com extrema calma e empatia.
 Você é uma guia espiritual e neurocientista lendo uma pergunta para o paciente.
 Faça pausas naturais. Velocidade reduzida (0.85x). Ressonância calorosa.`;
 
@@ -62,12 +63,15 @@ export function useAudioPlayback(vocalWarmth: number) {
   );
 
   const playQuestion = useCallback(
-    async (text: string, onEnded?: () => void) => {
+    async (text: string, onEnded?: () => void, onAudioReady?: (buffer: AudioBuffer) => void) => {
       stopCurrentAudio();
       setIsSpeakingQuestion(true);
 
       try {
         const { audioBuffer, audioContext } = await generateTTSAudio(text, QUESTION_PROSODY);
+
+        // Notify caller of the audio buffer (for recording)
+        onAudioReady?.(audioBuffer);
 
         const source = audioContext.createBufferSource();
         source.buffer = audioBuffer;
@@ -78,6 +82,44 @@ export function useAudioPlayback(vocalWarmth: number) {
         source.onended = () => {
           setIsSpeakingQuestion(false);
           // Don't close shared AudioContext - it's reused
+          currentAudioSource.current = null;
+          onEnded?.();
+        };
+        source.start(0);
+      } catch (e) {
+        setIsSpeakingQuestion(false);
+        throw e;
+      }
+    },
+    [stopCurrentAudio]
+  );
+
+  /**
+   * Play a question from a pre-cached TTSResult (instant, no API call)
+   */
+  const playQuestionFromBuffer = useCallback(
+    async (cached: TTSResult, onEnded?: () => void, onAudioReady?: (buffer: AudioBuffer) => void) => {
+      stopCurrentAudio();
+      setIsSpeakingQuestion(true);
+
+      try {
+        const { audioBuffer, audioContext } = cached;
+
+        // Ensure context is running
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        onAudioReady?.(audioBuffer);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+
+        currentAudioSource.current = source;
+
+        source.onended = () => {
+          setIsSpeakingQuestion(false);
           currentAudioSource.current = null;
           onEnded?.();
         };
@@ -138,6 +180,7 @@ export function useAudioPlayback(vocalWarmth: number) {
     isSpeakingQuestion,
     playVoice,
     playQuestion,
+    playQuestionFromBuffer,
     playIntroAudio,
     stopCurrentAudio,
   };
