@@ -1,4 +1,40 @@
 import { PersistedSession } from '@/types/session';
+import { NeuralAnalysis, BlockLevel, InvestigationCategory } from '@/types/analysis';
+
+/**
+ * Migrate old analysis blocks (intensity 0-100) to new format (level 1-5)
+ */
+function migrateAnalysis(session: PersistedSession): PersistedSession {
+  if (!session.analysis || session.analysis.length === 0) return session;
+
+  // Check if already migrated (has `level` field)
+  const first = session.analysis[0] as any;
+  if (first.level != null) return session;
+
+  const migratedBlocks: NeuralAnalysis[] = session.analysis.map((block: any) => {
+    const intensity = block.intensity ?? 50;
+    let level: BlockLevel;
+    if (intensity > 70) level = 5;
+    else if (intensity > 55) level = 4;
+    else if (intensity > 35) level = 3;
+    else if (intensity > 15) level = 2;
+    else level = 1;
+
+    return {
+      blockName: block.blockName,
+      level,
+      description: block.description,
+      evidence: [],
+      currentPatterns: [],
+      investigationCategory: 'gatilhos-atuais' as InvestigationCategory,
+      actionPlan: block.recommendations || [],
+      intensity: block.intensity,
+      recommendations: block.recommendations,
+    };
+  });
+
+  return { ...session, analysis: migratedBlocks };
+}
 
 const DB_NAME = 'neural-unlocker';
 const DB_VERSION = 1;
@@ -43,7 +79,7 @@ export async function getAllSessions(): Promise<PersistedSession[]> {
     request.onsuccess = () => {
       const cursor = request.result;
       if (cursor) {
-        results.push(cursor.value);
+        results.push(migrateAnalysis(cursor.value));
         cursor.continue();
       } else {
         resolve(results);
@@ -58,7 +94,7 @@ export async function getSession(id: string): Promise<PersistedSession | null> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const request = tx.objectStore(STORE_NAME).get(id);
-    request.onsuccess = () => resolve(request.result || null);
+    request.onsuccess = () => resolve(request.result ? migrateAnalysis(request.result) : null);
     request.onerror = () => reject(request.error);
   });
 }

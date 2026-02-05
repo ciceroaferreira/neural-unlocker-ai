@@ -1,15 +1,16 @@
-import { NeuralAnalysis } from '@/types/analysis';
+import { AnalysisResult } from '@/types/analysis';
+import { QuestionResponse } from '@/types/questionFlow';
 import { fetchWithRetry } from './fetchWithRetry';
 
-export async function generateInsightText(userInputs: string): Promise<string> {
+export async function runFullAnalysis(questionResponses: QuestionResponse[]): Promise<AnalysisResult> {
   const response = await fetchWithRetry(
-    '/api/analysis-insights',
+    '/api/analysis',
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userInputs }),
+      body: JSON.stringify({ questionResponses }),
     },
-    { maxRetries: 3, baseDelayMs: 1000 }
+    { maxRetries: 3, baseDelayMs: 2000, maxDelayMs: 15000 }
   );
 
   if (!response.ok) {
@@ -17,26 +18,6 @@ export async function generateInsightText(userInputs: string): Promise<string> {
     throw new Error(errorData.error || `Analysis API error: ${response.status}`);
   }
 
-  const { insights } = await response.json();
-  return insights || '';
-}
-
-export async function generateBlockAnalysis(userInputs: string): Promise<NeuralAnalysis[]> {
-  const response = await fetchWithRetry(
-    '/api/analysis-blocks',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userInputs }),
-    },
-    { maxRetries: 3, baseDelayMs: 1000 }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Block Analysis API error: ${response.status}`);
-  }
-
-  const { blocks } = await response.json();
-  return blocks || [];
+  const result: AnalysisResult = await response.json();
+  return result;
 }

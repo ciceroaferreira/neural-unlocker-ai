@@ -14,7 +14,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysis }) => {
       <div className="flex items-center gap-3 sm:gap-4 mb-2">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
         <h3 className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.4em] sm:tracking-[0.6em] text-indigo-400">
-          Mapeamento de Bloqueios
+          Mapeamento de Desbloqueios
         </h3>
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
       </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { NeuralAnalysis } from '@/types/analysis';
-import { generateInsightText, generateBlockAnalysis } from '@/services/analysisService';
+import { NeuralAnalysis, AnalysisResult } from '@/types/analysis';
+import { QuestionResponse } from '@/types/questionFlow';
+import { runFullAnalysis } from '@/services/analysisService';
 
 export function useNeuralAnalysis(onError: (error: any, context: string) => void) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -8,18 +9,15 @@ export function useNeuralAnalysis(onError: (error: any, context: string) => void
   const [aiInsights, setAiInsights] = useState<string | null>(null);
 
   const runAnalysis = useCallback(
-    async (userInputs: string): Promise<{ insights: string; blocks: NeuralAnalysis[] } | null> => {
-      if (!userInputs.trim()) return null;
+    async (questionResponses: QuestionResponse[]): Promise<AnalysisResult | null> => {
+      if (questionResponses.length === 0) return null;
       setIsAnalyzing(true);
 
       try {
-        const insights = await generateInsightText(userInputs);
-        setAiInsights(insights);
-
-        const blocks = await generateBlockAnalysis(userInputs);
-        setAnalysis(blocks);
-
-        return { insights, blocks };
+        const result = await runFullAnalysis(questionResponses);
+        setAiInsights(result.insights);
+        setAnalysis(result.blocks);
+        return result;
       } catch (e) {
         onError(e, 'Neural Mapping');
         return null;
