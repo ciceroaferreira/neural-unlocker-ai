@@ -8,6 +8,7 @@ const ANALYSIS_SCHEMA = {
   type: 'object' as const,
   properties: {
     insights: { type: 'string' as const },
+    totalBloqueiosEncontrados: { type: 'number' as const },
     blocks: {
       type: 'array' as const,
       items: {
@@ -16,7 +17,22 @@ const ANALYSIS_SCHEMA = {
           blockName: { type: 'string' as const },
           level: { type: 'number' as const, enum: [1, 2, 3, 4, 5] },
           description: { type: 'string' as const },
-          evidence: { type: 'array' as const, items: { type: 'string' as const } },
+          evidence: {
+            type: 'array' as const,
+            items: {
+              type: 'object' as const,
+              properties: {
+                phrase: { type: 'string' as const },
+                dominantEmotion: {
+                  type: 'string' as const,
+                  enum: ['medo', 'raiva', 'vergonha', 'culpa', 'tristeza'],
+                },
+                context: { type: 'string' as const },
+              },
+              required: ['phrase', 'dominantEmotion', 'context'] as const,
+              additionalProperties: false,
+            },
+          },
           currentPatterns: { type: 'array' as const, items: { type: 'string' as const } },
           investigationCategory: {
             type: 'string' as const,
@@ -24,12 +40,12 @@ const ANALYSIS_SCHEMA = {
           },
           actionPlan: { type: 'array' as const, items: { type: 'string' as const } },
         },
-        required: ['blockName', 'level', 'description', 'evidence', 'currentPatterns', 'investigationCategory', 'actionPlan'],
+        required: ['blockName', 'level', 'description', 'evidence', 'currentPatterns', 'investigationCategory', 'actionPlan'] as const,
         additionalProperties: false,
       },
     },
   },
-  required: ['insights', 'blocks'],
+  required: ['insights', 'totalBloqueiosEncontrados', 'blocks'] as const,
   additionalProperties: false,
 };
 

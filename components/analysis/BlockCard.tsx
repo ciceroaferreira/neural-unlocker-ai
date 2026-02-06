@@ -1,5 +1,13 @@
 import React from 'react';
-import { NeuralAnalysis, LEVEL_LABELS, LEVEL_COLORS, INVESTIGATION_CATEGORY_LABELS, BlockLevel } from '@/types/analysis';
+import { NeuralAnalysis, LEVEL_LABELS, LEVEL_COLORS, INVESTIGATION_CATEGORY_LABELS, EMOTION_LABELS, BlockLevel, EvidenceItem, DominantEmotion } from '@/types/analysis';
+
+const EMOTION_COLORS: Record<DominantEmotion, string> = {
+  medo: 'bg-blue-500/20 text-blue-300',
+  raiva: 'bg-red-500/20 text-red-300',
+  vergonha: 'bg-pink-500/20 text-pink-300',
+  culpa: 'bg-orange-500/20 text-orange-300',
+  tristeza: 'bg-slate-500/20 text-slate-300',
+};
 
 interface BlockCardProps {
   block: NeuralAnalysis;
@@ -68,12 +76,29 @@ const BlockCard: React.FC<BlockCardProps> = ({ block, index }) => {
           <h5 className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-400">
             Evidências
           </h5>
-          <div className="space-y-2">
-            {block.evidence.map((ev, i) => (
-              <blockquote key={i} className="border-l-2 border-amber-400/30 pl-3 text-sm text-gray-400 italic">
-                "{ev}"
-              </blockquote>
-            ))}
+          <div className="space-y-3">
+            {block.evidence.map((ev: EvidenceItem | string, i: number) => {
+              if (typeof ev === 'string') {
+                return (
+                  <blockquote key={i} className="border-l-2 border-amber-400/30 pl-3 text-sm text-gray-400 italic">
+                    "{ev}"
+                  </blockquote>
+                );
+              }
+              const emotionColor = EMOTION_COLORS[ev.dominantEmotion] || 'bg-gray-500/20 text-gray-300';
+              const emotionLabel = EMOTION_LABELS[ev.dominantEmotion] || ev.dominantEmotion;
+              return (
+                <div key={i} className="border-l-2 border-amber-400/30 pl-3 space-y-1.5">
+                  <p className="text-sm text-gray-400 italic">"{ev.phrase}"</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${emotionColor}`}>
+                      {emotionLabel}
+                    </span>
+                    <span className="text-[8px] text-gray-500">{ev.context}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

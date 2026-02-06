@@ -35,9 +35,15 @@ Classifique cada bloqueio na categoria de onde ele mais se origina:
 - **experiencias-marcantes**: Traumas, eventos significativos, experiências que moldaram crenças limitantes.
 - **gatilhos-atuais**: Situações presentes que ativam padrões antigos. Relacionamentos, trabalho, contextos sociais.
 
+## Formato das Evidências
+Cada evidência é um objeto estruturado com:
+- **phrase**: citação REAL do usuário — trecho literal ou paráfrase muito próxima
+- **dominantEmotion**: a emoção predominante nessa evidência. Valores possíveis: "medo", "raiva", "vergonha", "culpa", "tristeza"
+- **context**: de onde veio essa evidência (ex: "Herança familiar — relato sobre a mãe", "Gatilho atual — padrão no trabalho")
+
 ## Regras
-1. Retorne EXATAMENTE 5 bloqueios, ordenados do mais forte (level 5) para o mais leve.
-2. O campo "evidence" deve conter citações REAIS do que o usuário disse — trechos literais ou paráfrases muito próximas. Cruze informações entre as 3 etapas para conectar raízes (herança) com manifestações atuais (gatilhos).
+1. Identifique TODOS os bloqueios que encontrar nas respostas. Retorne o total no campo "totalBloqueiosEncontrados". Depois selecione os TOP 5 mais graves para o campo "blocks", ordenados do mais forte (level 5) para o mais leve.
+2. O campo "evidence" deve conter evidências estruturadas com citações REAIS. Cruze informações entre as 3 etapas para conectar raízes (herança) com manifestações atuais (gatilhos).
 3. O campo "currentPatterns" descreve como o bloqueio se manifesta no presente, conectando a origem (etapa 1 ou 2) com o gatilho atual (etapa 3).
 4. O campo "actionPlan" deve ter passos práticos, empáticos e realizáveis.
 5. O campo "description" deve ser profundo mas acessível, em tom empático.

@@ -5,11 +5,19 @@ export type InvestigationCategory =
   | 'experiencias-marcantes'
   | 'gatilhos-atuais';
 
+export type DominantEmotion = 'medo' | 'raiva' | 'vergonha' | 'culpa' | 'tristeza';
+
+export interface EvidenceItem {
+  phrase: string;
+  dominantEmotion: DominantEmotion;
+  context: string;
+}
+
 export interface NeuralAnalysis {
   blockName: string;
   level: BlockLevel;
   description: string;
-  evidence: string[];
+  evidence: EvidenceItem[];
   currentPatterns: string[];
   investigationCategory: InvestigationCategory;
   actionPlan: string[];
@@ -21,7 +29,16 @@ export interface NeuralAnalysis {
 export interface AnalysisResult {
   insights: string;
   blocks: NeuralAnalysis[];
+  totalBloqueiosEncontrados: number;
 }
+
+export const EMOTION_LABELS: Record<DominantEmotion, string> = {
+  medo: 'Medo',
+  raiva: 'Raiva',
+  vergonha: 'Vergonha',
+  culpa: 'Culpa',
+  tristeza: 'Tristeza',
+};
 
 export const LEVEL_LABELS: Record<BlockLevel, string> = {
   5: 'Trava Forte',

@@ -7,6 +7,7 @@ export function useNeuralAnalysis(onError: (error: any, context: string) => void
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<NeuralAnalysis[] | null>(null);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [totalBloqueios, setTotalBloqueios] = useState<number | null>(null);
 
   const runAnalysis = useCallback(
     async (questionResponses: QuestionResponse[]): Promise<AnalysisResult | null> => {
@@ -17,6 +18,7 @@ export function useNeuralAnalysis(onError: (error: any, context: string) => void
         const result = await runFullAnalysis(questionResponses);
         setAiInsights(result.insights);
         setAnalysis(result.blocks);
+        setTotalBloqueios(result.totalBloqueiosEncontrados);
         return result;
       } catch (e) {
         onError(e, 'Neural Mapping');
@@ -31,7 +33,8 @@ export function useNeuralAnalysis(onError: (error: any, context: string) => void
   const reset = useCallback(() => {
     setAnalysis(null);
     setAiInsights(null);
+    setTotalBloqueios(null);
   }, []);
 
-  return { isAnalyzing, analysis, aiInsights, runAnalysis, reset };
+  return { isAnalyzing, analysis, aiInsights, totalBloqueios, runAnalysis, reset };
 }

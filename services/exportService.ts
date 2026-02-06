@@ -1,6 +1,6 @@
 import { ReportData } from '@/types/export';
 import { CATEGORY_LABELS } from '@/constants/questions';
-import { LEVEL_LABELS, INVESTIGATION_CATEGORY_LABELS, BlockLevel, NeuralAnalysis } from '@/types/analysis';
+import { LEVEL_LABELS, INVESTIGATION_CATEGORY_LABELS, EMOTION_LABELS, BlockLevel, NeuralAnalysis, EvidenceItem } from '@/types/analysis';
 
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString('pt-BR', {
@@ -91,8 +91,12 @@ export function generateMarkdownReport(data: ReportData): string {
 
       if (block.evidence && block.evidence.length > 0) {
         lines.push('**Evidências:**');
-        block.evidence.forEach(ev => {
-          lines.push(`> "${ev}"`);
+        block.evidence.forEach((ev: EvidenceItem | string) => {
+          if (typeof ev === 'string') {
+            lines.push(`> "${ev}"`);
+          } else {
+            lines.push(`> "${ev.phrase}" — *${EMOTION_LABELS[ev.dominantEmotion] || ev.dominantEmotion}* (${ev.context})`);
+          }
         });
         lines.push('');
       }
@@ -250,8 +254,13 @@ export async function downloadPDF(data: ReportData): Promise<void> {
 
       if (block.evidence && block.evidence.length > 0) {
         addText('Evidências:', 9, 'bold', [245, 158, 11]);
-        block.evidence.forEach(ev => {
-          addText(`  "${ev}"`, 8, 'italic', [160, 160, 160]);
+        block.evidence.forEach((ev: EvidenceItem | string) => {
+          if (typeof ev === 'string') {
+            addText(`  "${ev}"`, 8, 'italic', [160, 160, 160]);
+          } else {
+            addText(`  "${ev.phrase}"`, 8, 'italic', [160, 160, 160]);
+            addText(`    ${EMOTION_LABELS[ev.dominantEmotion] || ev.dominantEmotion} — ${ev.context}`, 7, 'normal', [130, 130, 130]);
+          }
         });
         y += 2;
       }

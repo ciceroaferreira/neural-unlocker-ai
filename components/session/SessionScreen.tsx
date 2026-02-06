@@ -103,7 +103,7 @@ const SessionScreen: React.FC<SessionScreenProps> = ({ onBack, onError, onSessio
             />
 
             {machine.analysis && (
-              <AnalysisResults analysis={machine.analysis} />
+              <AnalysisResults analysis={machine.analysis} totalBloqueios={machine.totalBloqueios} />
             )}
 
             {machine.reportData && (

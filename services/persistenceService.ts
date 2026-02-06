@@ -1,39 +1,59 @@
 import { PersistedSession } from '@/types/session';
-import { NeuralAnalysis, BlockLevel, InvestigationCategory } from '@/types/analysis';
+import { NeuralAnalysis, BlockLevel, InvestigationCategory, EvidenceItem } from '@/types/analysis';
 
 /**
- * Migrate old analysis blocks (intensity 0-100) to new format (level 1-5)
+ * Migrate old analysis blocks to current format.
+ * Handles two legacy formats:
+ * - Phase 1: intensity (0-100), no level, evidence as string[]
+ * - Phase 2.5: level (1-5), evidence as string[] (not structured)
  */
 function migrateAnalysis(session: PersistedSession): PersistedSession {
   if (!session.analysis || session.analysis.length === 0) return session;
 
-  // Check if already migrated (has `level` field)
   const first = session.analysis[0] as any;
-  if (first.level != null) return session;
 
-  const migratedBlocks: NeuralAnalysis[] = session.analysis.map((block: any) => {
-    const intensity = block.intensity ?? 50;
-    let level: BlockLevel;
-    if (intensity > 70) level = 5;
-    else if (intensity > 55) level = 4;
-    else if (intensity > 35) level = 3;
-    else if (intensity > 15) level = 2;
-    else level = 1;
+  // Phase 1 legacy: no `level` field, has `intensity`
+  if (first.level == null) {
+    const migratedBlocks: NeuralAnalysis[] = session.analysis.map((block: any) => {
+      const intensity = block.intensity ?? 50;
+      let level: BlockLevel;
+      if (intensity > 70) level = 5;
+      else if (intensity > 55) level = 4;
+      else if (intensity > 35) level = 3;
+      else if (intensity > 15) level = 2;
+      else level = 1;
 
-    return {
-      blockName: block.blockName,
-      level,
-      description: block.description,
-      evidence: [],
-      currentPatterns: [],
-      investigationCategory: 'gatilhos-atuais' as InvestigationCategory,
-      actionPlan: block.recommendations || [],
-      intensity: block.intensity,
-      recommendations: block.recommendations,
-    };
-  });
+      return {
+        blockName: block.blockName,
+        level,
+        description: block.description,
+        evidence: [],
+        currentPatterns: [],
+        investigationCategory: 'gatilhos-atuais' as InvestigationCategory,
+        actionPlan: block.recommendations || [],
+        intensity: block.intensity,
+        recommendations: block.recommendations,
+      };
+    });
 
-  return { ...session, analysis: migratedBlocks };
+    return { ...session, analysis: migratedBlocks };
+  }
+
+  // Phase 2.5 legacy: has level, but evidence is string[] not EvidenceItem[]
+  if (first.evidence && first.evidence.length > 0 && typeof first.evidence[0] === 'string') {
+    const migratedBlocks: NeuralAnalysis[] = session.analysis.map((block: any) => ({
+      ...block,
+      evidence: (block.evidence as string[]).map((phrase: string): EvidenceItem => ({
+        phrase,
+        dominantEmotion: 'medo',
+        context: 'Sessão anterior (migrado)',
+      })),
+    }));
+
+    return { ...session, analysis: migratedBlocks };
+  }
+
+  return session;
 }
 
 const DB_NAME = 'neural-unlocker';

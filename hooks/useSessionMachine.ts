@@ -435,6 +435,7 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
     messages: gemini.messages,
     analysis: neuralAnalysis.analysis,
     aiInsights: neuralAnalysis.aiInsights,
+    totalBloqueios: neuralAnalysis.totalBloqueios,
     reportData: state.reportData,
     questionResponses: questionFlow.state.responses,
     durationSeconds: timer.seconds,
