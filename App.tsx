@@ -17,12 +17,21 @@ const App: React.FC = () => {
   const handleError = useCallback((error: any, context: string) => {
     console.error(`Error in ${context}:`, error);
     const errorMsg = error?.message || error?.toString?.() || 'Erro desconhecido';
+    const msgLower = errorMsg.toLowerCase();
+
+    let suggestion = 'Tente novamente. Se o erro persistir, verifique sua conexão.';
+    if (msgLower.includes('api') || msgLower.includes('key') || msgLower.includes('environment')) {
+      suggestion = 'Verifique se as chaves de API estão configuradas corretamente no ambiente.';
+    } else if (msgLower.includes('microfone') || msgLower.includes('microphone') || msgLower.includes('permission')) {
+      suggestion = 'Verifique as permissões do microfone no navegador.';
+    } else if (msgLower.includes('500') || msgLower.includes('modelo') || msgLower.includes('model')) {
+      suggestion = 'Erro no servidor de análise. Tente novamente em alguns segundos.';
+    }
+
     setAppError({
       title: `Erro: ${context}`,
       message: errorMsg,
-      suggestion: errorMsg.includes('API') || errorMsg.includes('key')
-        ? 'Verifique se a GEMINI_API_KEY está configurada corretamente no .env.local'
-        : 'Verifique conexão e microfone.',
+      suggestion,
     });
   }, []);
 

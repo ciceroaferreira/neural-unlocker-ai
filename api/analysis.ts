@@ -91,10 +91,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
-      return res.status(500).json({ error: 'Empty response from analysis model' });
+      return res.status(500).json({ error: 'Resposta vazia do modelo de análise' });
     }
 
-    const result = JSON.parse(content);
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch (parseError) {
+      console.error('[Analysis] JSON parse failed. Raw content:', content.slice(0, 500));
+      return res.status(500).json({ error: 'Resposta do modelo em formato inválido. Tente novamente.' });
+    }
+
+    if (!result.blocks || !Array.isArray(result.blocks)) {
+      return res.status(500).json({ error: 'Resposta do modelo sem bloqueios. Tente novamente.' });
+    }
 
     // Sort blocks by level descending (5 → 1)
     result.blocks.sort((a: any, b: any) => b.level - a.level);

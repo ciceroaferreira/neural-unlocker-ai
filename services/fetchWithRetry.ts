@@ -38,6 +38,11 @@ export async function fetchWithRetry(
         return response;
       }
 
+      // Last attempt — return the error response so caller can read the body
+      if (attempt === maxRetries) {
+        return response;
+      }
+
       // Retryable status — fall through to retry logic
       lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (err) {
