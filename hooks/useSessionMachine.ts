@@ -13,7 +13,7 @@ import { useNeuralStatus } from './useNeuralStatus';
 import { useSessionAudio } from './useSessionAudio';
 import { useAudioExport } from './useAudioExport';
 import { initAudioContext } from '@/services/audioContextManager';
-import { generateTTSAudio, TTSResult } from '@/services/ttsService';
+import { generateTTSAudio, TTSResult, clearTTSCache } from '@/services/ttsService';
 import { MANDATORY_QUESTIONS } from '@/constants/questions';
 
 interface UseSessionMachineOptions {
@@ -113,9 +113,9 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
         if (cancelled) return;
 
         // 5. Start WebSocket transcription
-        const session = await gemini.startSession(() => {
+        await gemini.startSession(() => {
           capture.onAudioProcess((base64, rawData) => {
-            session.sendAudio(base64);
+            gemini.sessionRef.current?.sendAudio(base64);
             if (rawData) {
               sessionAudio.addResponseChunk(rawData);
             }
@@ -370,8 +370,9 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
 
   const handleAbort = useCallback(() => {
     triggerHaptic(20);
-    // Clear TTS cache to free memory (BUG-004 fix)
+    // Clear TTS cache to free memory (BUG-004 fix + BUG-003 global cache)
     ttsCacheRef.current.clear();
+    clearTTSCache();
     dispatch({ type: 'ABORT_SESSION' });
   }, [triggerHaptic]);
 
@@ -380,8 +381,9 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
   }, []);
 
   const handleNewSession = useCallback(() => {
-    // Clear TTS cache to free memory (BUG-004 fix)
+    // Clear TTS cache to free memory (BUG-004 fix + BUG-003 global cache)
     ttsCacheRef.current.clear();
+    clearTTSCache();
     dispatch({ type: 'RESET' });
   }, []);
 

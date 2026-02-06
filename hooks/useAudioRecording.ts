@@ -26,17 +26,26 @@ export function useAudioRecording(): AudioRecordingState {
   const isMutedRef = useRef(false);
   const inputAudioCtxRef = useRef<AudioContext | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rawBuffers = useRef<Float32Array[]>([]);
 
   const cleanup = useCallback(() => {
+    if (sourceRef.current) {
+      try { sourceRef.current.disconnect(); } catch (e) {
+        console.warn('[AudioRecording] Source disconnect error:', e);
+      }
+      sourceRef.current = null;
+    }
     if (scriptProcessorRef.current) {
       scriptProcessorRef.current.disconnect();
       scriptProcessorRef.current = null;
     }
     if (inputAudioCtxRef.current) {
       if (inputAudioCtxRef.current.state !== 'closed') {
-        inputAudioCtxRef.current.close().catch(() => {});
+        inputAudioCtxRef.current.close().catch((err) => {
+          console.warn('[AudioRecording] AudioContext close failed:', err);
+        });
       }
       inputAudioCtxRef.current = null;
     }
@@ -44,6 +53,7 @@ export function useAudioRecording(): AudioRecordingState {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
+    rawBuffers.current = [];
     setVolume(0);
     setIsRecording(false);
     setIsPaused(false);
@@ -64,6 +74,7 @@ export function useAudioRecording(): AudioRecordingState {
     await inputCtx.resume();
 
     const source = inputCtx.createMediaStreamSource(stream);
+    sourceRef.current = source;
     const scriptNode = inputCtx.createScriptProcessor(AUDIO_CONFIG.BUFFER_SIZE, 1, 1);
     scriptProcessorRef.current = scriptNode;
 

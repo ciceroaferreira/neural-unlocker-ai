@@ -128,3 +128,47 @@ export async function deleteSession(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+/**
+ * Delete the oldest sessions, keeping only the most recent `keepCount`.
+ * Returns the number of deleted sessions.
+ */
+export async function deleteOldestSessions(keepCount: number): Promise<number> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const countReq = store.count();
+    let deletedCount = 0;
+
+    let resolved = false;
+
+    countReq.onsuccess = () => {
+      const total = countReq.result;
+      const toDelete = Math.max(0, total - keepCount);
+      if (toDelete === 0) return; // Let tx.oncomplete resolve with 0
+
+      const index = store.index('createdAt');
+      const cursorReq = index.openCursor(null, 'next'); // oldest first
+      cursorReq.onsuccess = () => {
+        const cursor = cursorReq.result;
+        if (cursor && deletedCount < toDelete) {
+          cursor.delete();
+          deletedCount++;
+          cursor.continue();
+        }
+      };
+    };
+
+    tx.oncomplete = () => {
+      if (!resolved) {
+        resolved = true;
+        if (deletedCount > 0) {
+          console.log(`[Persistence] Deleted ${deletedCount} oldest sessions (kept ${keepCount})`);
+        }
+        resolve(deletedCount);
+      }
+    };
+    tx.onerror = () => reject(tx.error);
+  });
+}

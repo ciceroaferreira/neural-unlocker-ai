@@ -3,7 +3,7 @@ import { Question, QuestionCategory } from '@/types/questionFlow';
 export const MANDATORY_QUESTIONS: Question[] = [
   {
     id: 'q-heranca-familiar',
-    text: 'O que você ouviu, viu e sentiu dos seus pais e avós?',
+    text: 'O que você viu, ouviu e sentiu ao longo de sua vida no relacionamento com seus pais e avós?',
     category: 'heranca-familiar',
     isMandatory: true,
     order: 0,

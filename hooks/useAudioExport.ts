@@ -95,11 +95,15 @@ export function useAudioExport(getSegments: () => AudioSegment[]) {
       return a.type === 'question' ? -1 : 1;
     });
 
+    // Filter out segments with empty buffers
+    const validSegments = sortedSegments.filter(s => s.buffer.length > 0);
+    if (validSegments.length === 0) return null;
+
     // Resample all segments to export sample rate and combine with silence
     const allBuffers: Float32Array[] = [];
     let prevType: 'question' | 'response' | null = null;
 
-    for (const segment of sortedSegments) {
+    for (const segment of validSegments) {
       // Add silence between segments (but not before first segment)
       if (prevType !== null) {
         // Add longer silence after response (1 second before next question)
@@ -122,7 +126,7 @@ export function useAudioExport(getSegments: () => AudioSegment[]) {
       offset += buf.length;
     }
 
-    console.log(`[AudioExport] Combined ${sortedSegments.length} segments, total ${totalLength} samples at ${EXPORT_SAMPLE_RATE}Hz`);
+    console.log(`[AudioExport] Combined ${validSegments.length} segments, total ${totalLength} samples at ${EXPORT_SAMPLE_RATE}Hz`);
 
     // Convert to Int16 PCM
     const pcm16 = float32ToInt16(combined);

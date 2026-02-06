@@ -17,8 +17,8 @@ function isRetryable(status: number): boolean {
 function getDelay(attempt: number, base: number, max: number): number {
   const exponential = base * Math.pow(2, attempt);
   const capped = Math.min(exponential, max);
-  // Jitter: random between 50%-100% of the capped delay
-  return capped * (0.5 + Math.random() * 0.5);
+  // Full jitter: random between 0%-100% of the capped delay (AWS recommended)
+  return capped * Math.random();
 }
 
 export async function fetchWithRetry(

@@ -8,6 +8,7 @@ export interface TranscriptionCallbacks {
   onOpen: () => void;
   onError: (error: any) => void;
   onClose: () => void;
+  onUnexpectedClose?: () => void;
 }
 
 export interface LiveSession {
@@ -19,6 +20,7 @@ export async function createLiveTranscriptionSession(
   callbacks: TranscriptionCallbacks
 ): Promise<LiveSession> {
   const ai = getGeminiClient();
+  let wasIntentionalClose = false;
 
   const session = await ai.live.connect({
     model: GEMINI_MODELS.LIVE_AUDIO,
@@ -30,7 +32,12 @@ export async function createLiveTranscriptionSession(
         }
       },
       onerror: (e: any) => callbacks.onError(e),
-      onclose: () => callbacks.onClose(),
+      onclose: () => {
+        callbacks.onClose();
+        if (!wasIntentionalClose && callbacks.onUnexpectedClose) {
+          callbacks.onUnexpectedClose();
+        }
+      },
     },
     config: {
       responseModalities: [Modality.AUDIO],
@@ -46,13 +53,16 @@ export async function createLiveTranscriptionSession(
           media: { data: base64Data, mimeType: 'audio/pcm;rate=16000' },
         });
       } catch (err) {
-        // Silently ignore send errors on closed sessions
+        console.warn('[Transcription] sendAudio error on closed session:', err);
       }
     },
     close: () => {
+      wasIntentionalClose = true;
       try {
         session.close();
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[Transcription] close error:', err);
+      }
     },
   };
 }
