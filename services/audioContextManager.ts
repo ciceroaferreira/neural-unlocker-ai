@@ -10,6 +10,7 @@
  */
 
 let sharedContext: AudioContext | null = null;
+let initPromise: Promise<AudioContext> | null = null;
 
 export function getSharedAudioContext(): AudioContext | null {
   return sharedContext;
@@ -21,22 +22,39 @@ export function getSharedAudioContext(): AudioContext | null {
  *
  * NOTE: We don't specify a sampleRate to let iOS use its native rate.
  * The audio will be resampled when creating AudioBuffers.
+ *
+ * Uses Promise-based lock to prevent race condition where multiple
+ * concurrent calls could create multiple AudioContext instances.
  */
 export async function initAudioContext(): Promise<AudioContext> {
-  if (!sharedContext) {
-    // Don't specify sampleRate - let the device use its native rate
-    // iOS Safari will ignore sampleRate anyway and use 48000 Hz
-    sharedContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    console.log('AudioContext created with sample rate:', sharedContext.sampleRate);
+  // Race condition guard: reuse pending init promise
+  if (initPromise) {
+    return initPromise;
   }
 
-  // Mobile browsers may suspend the context - resume it
-  if (sharedContext.state === 'suspended') {
-    await sharedContext.resume();
-    console.log('AudioContext resumed, state:', sharedContext.state);
-  }
+  initPromise = (async () => {
+    if (!sharedContext) {
+      // Don't specify sampleRate - let the device use its native rate
+      // iOS Safari will ignore sampleRate anyway and use 48000 Hz
+      sharedContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('AudioContext created with sample rate:', sharedContext.sampleRate);
+    }
 
-  return sharedContext;
+    // Mobile browsers may suspend the context - resume it
+    if (sharedContext.state === 'suspended') {
+      await sharedContext.resume();
+      console.log('AudioContext resumed, state:', sharedContext.state);
+    }
+
+    return sharedContext;
+  })();
+
+  try {
+    return await initPromise;
+  } finally {
+    // Clear promise after resolution to allow retry on failure
+    initPromise = null;
+  }
 }
 
 /**

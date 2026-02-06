@@ -370,6 +370,8 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
 
   const handleAbort = useCallback(() => {
     triggerHaptic(20);
+    // Clear TTS cache to free memory (BUG-004 fix)
+    ttsCacheRef.current.clear();
     dispatch({ type: 'ABORT_SESSION' });
   }, [triggerHaptic]);
 
@@ -378,6 +380,8 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
   }, []);
 
   const handleNewSession = useCallback(() => {
+    // Clear TTS cache to free memory (BUG-004 fix)
+    ttsCacheRef.current.clear();
     dispatch({ type: 'RESET' });
   }, []);
 
@@ -399,6 +403,8 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
   const hasReport = state.phase === 'results';
   const isFlowComplete = questionFlow.state.isFlowComplete;
   const hasMessages = gemini.messages.length > 0;
+  // BUG-007 fix: expose speaking phase to disable "Next" button during TTS
+  const isSpeaking = state.phase === 'speaking';
 
   return {
     // State machine
@@ -411,6 +417,7 @@ export function useSessionMachine({ onError, onSessionComplete }: UseSessionMach
     hasReport,
     isFlowComplete,
     hasMessages,
+    isSpeaking,
 
     // Recording state
     volume: recording.volume,
